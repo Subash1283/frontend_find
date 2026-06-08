@@ -154,7 +154,7 @@ export const EditModal: React.FC<EditModalProps> = ({
     };
 
     try {
-      showToast('Optimizing image...', 'info');
+      showToast('Optimizing image...', 'success');
       for (let i = 0; i < selectedFiles.length; i++) {
         const compressedBlob = await imageCompression(selectedFiles[i], options);
         const compressedFile = new File([compressedBlob], selectedFiles[i].name, {
