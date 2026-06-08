@@ -280,13 +280,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
     setIsSuspending(true);
     try {
-      const res = await fetch(`${apiBase}/users/${id}/suspend`, {
+      const endpoint = mode === 'suspend' ? 'suspend' : 'unsuspend';
+      const res = await fetch(`${apiBase}/users/${id}/${endpoint}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          suspended: mode === 'suspend',
-          ...(mode === 'suspend' ? { reason } : {}),
-        }),
+        body: JSON.stringify(mode === 'suspend' ? { reason } : {}),
       });
       if (res.ok) {
         showToast(

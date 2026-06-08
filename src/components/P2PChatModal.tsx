@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import 'emoji-picker-element';
+import imageCompression from 'browser-image-compression';
 
 
 declare global {
@@ -197,10 +198,23 @@ export const P2PChatModal: React.FC<P2PChatModalProps> = ({
     if (!file || !socket) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
+
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
 
     try {
+      const compressedBlob = await imageCompression(file, options);
+      const compressedFile = new File([compressedBlob], file.name, {
+        type: file.type,
+        lastModified: Date.now(),
+      });
+
+      const formData = new FormData();
+      formData.append('file', compressedFile);
+
       const res = await fetch(`${apiBase}/chat/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -225,7 +239,7 @@ export const P2PChatModal: React.FC<P2PChatModalProps> = ({
         alert('Failed to upload image');
       }
     } catch {
-      alert('Error uploading image');
+      alert('Error compressing or uploading image');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

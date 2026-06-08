@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
+import imageCompression from 'browser-image-compression';
 
 interface ReportModalProps {
   token: string;
@@ -27,7 +28,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [sensitiveBlur, setSensitiveBlur] = useState(false);
   const [reward, setReward] = useState('');
   const [currency, setCurrency] = useState('NPR');
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [files, setFiles] = useState<File[] | null>(null);
   const [showMismatchDialog, setShowMismatchDialog] = useState(false);
   const [mismatchDetails, setMismatchDetails] = useState<{ reason: string; title: string; category: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,7 +82,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   }, [category, documentType]);
 
   // File validator
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
 
@@ -101,11 +102,39 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         return;
       }
     }
-    setFiles(selectedFiles);
 
-    // Trigger AI Auto-fill if it's not a document
-    if (category !== 'Documents' && selectedFiles[0]) {
-      handleAutoFill(selectedFiles[0]);
+    const compressedFiles: File[] = [];
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
+
+    try {
+      showToast('Optimizing image...', 'info');
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const compressedBlob = await imageCompression(selectedFiles[i], options);
+        // Convert Blob back to File
+        const compressedFile = new File([compressedBlob], selectedFiles[i].name, {
+          type: selectedFiles[i].type,
+          lastModified: Date.now(),
+        });
+        compressedFiles.push(compressedFile);
+      }
+      setFiles(compressedFiles);
+
+      // Trigger AI Auto-fill if it's not a document
+      if (category !== 'Documents' && compressedFiles[0]) {
+        handleAutoFill(compressedFiles[0]);
+      }
+    } catch (error) {
+      console.error('Compression error:', error);
+      showToast('Image optimization failed, using original', 'error');
+      const originalFiles = Array.from(selectedFiles);
+      setFiles(originalFiles);
+      if (category !== 'Documents' && originalFiles[0]) {
+        handleAutoFill(originalFiles[0]);
+      }
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
+import imageCompression from 'browser-image-compression';
 
 interface EditModalProps {
   token: string;
@@ -30,7 +31,7 @@ export const EditModal: React.FC<EditModalProps> = ({
   const [reward, setReward] = useState('');
   const [currency, setCurrency] = useState('NPR');
   const [status, setStatus] = useState('active');
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [files, setFiles] = useState<File[] | null>(null);
   const [documentType, setDocumentType] = useState('citizenship');
 
   const [isLoading, setIsLoading] = useState(true);
@@ -124,7 +125,7 @@ export const EditModal: React.FC<EditModalProps> = ({
     if (fileInput) fileInput.value = '';
   }, [category, documentType]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles) return;
 
@@ -144,7 +145,30 @@ export const EditModal: React.FC<EditModalProps> = ({
         return;
       }
     }
-    setFiles(selectedFiles);
+
+    const compressedFiles: File[] = [];
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
+
+    try {
+      showToast('Optimizing image...', 'info');
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const compressedBlob = await imageCompression(selectedFiles[i], options);
+        const compressedFile = new File([compressedBlob], selectedFiles[i].name, {
+          type: selectedFiles[i].type,
+          lastModified: Date.now(),
+        });
+        compressedFiles.push(compressedFile);
+      }
+      setFiles(compressedFiles);
+    } catch (error) {
+      console.error('Compression error:', error);
+      showToast('Image optimization failed, using original', 'error');
+      setFiles(Array.from(selectedFiles));
+    }
   };
 
   // Location Picker leaflet map logic

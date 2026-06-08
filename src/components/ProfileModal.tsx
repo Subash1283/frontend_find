@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import imageCompression from 'browser-image-compression';
 
 
 interface ProfileModalProps {
@@ -31,7 +32,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   // Identity Verification fields
   const [docType, setDocType] = useState<'citizenship' | 'passport' | 'driving_license' | 'student_id'>('citizenship');
-  const [docFiles, setDocFiles] = useState<FileList | null>(null);
+  const [docFiles, setDocFiles] = useState<File[] | null>(null);
   const [isUploadingDocs, setIsUploadingDocs] = useState(false);
 
 
@@ -103,6 +104,35 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       showToast('Connection error to backend', 'error');
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    const compressedFiles: File[] = [];
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
+
+    try {
+      showToast('Optimizing document...', 'info');
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const compressedBlob = await imageCompression(selectedFiles[i], options);
+        const compressedFile = new File([compressedBlob], selectedFiles[i].name, {
+          type: selectedFiles[i].type,
+          lastModified: Date.now(),
+        });
+        compressedFiles.push(compressedFile);
+      }
+      setDocFiles(compressedFiles);
+    } catch (error) {
+      console.error('Compression error:', error);
+      showToast('Document optimization failed, using original', 'error');
+      setDocFiles(Array.from(selectedFiles));
     }
   };
 
@@ -290,7 +320,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         type="file"
                         multiple
                         accept="image/*"
-                        onChange={e => setDocFiles(e.target.files)}
+                        onChange={handleFileChange}
                       />
                       <small style={{ color: 'var(--text-soft)', marginTop: '4px', display: 'block' }}>
                         {(docType === 'passport' || docType === 'student_id')
