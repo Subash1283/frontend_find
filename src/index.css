@@ -1689,7 +1689,7 @@ body {
   border-radius: var(--r-sm);
   font-size: 1rem;
   font-weight: 500;
-  color: #ffffff;
+  color: #ffffff !important;
   cursor: pointer;
   transition: all 0.18s ease;
   background: transparent;
@@ -1697,14 +1697,14 @@ body {
   width: 100%;
   text-align: left;
   position: relative;
-  text-decoration: none;
+  text-decoration: none !important;
   box-sizing: border-box;
 }
 
 a.nav-item,
 a.sidebar-logo {
-  text-decoration: none;
-  color: inherit;
+  text-decoration: none !important;
+  color: #ffffff !important;
 }
 
 .nav-item .nav-icon {
@@ -1718,28 +1718,41 @@ a.sidebar-logo {
   background: rgba(255, 255, 255, 0.1);
   transition: all 0.18s;
   flex-shrink: 0;
-  color: #ffffff;
+  color: #ffffff !important;
+}
+
+/* Force all child text spans inside nav-item to be white */
+.nav-item span:not(.nav-icon):not(.nav-badge) {
+  color: #ffffff !important;
 }
 
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .nav-item:hover .nav-icon {
   background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  color: #ffffff !important;
+}
+
+.nav-item:hover span:not(.nav-icon):not(.nav-badge) {
+  color: #ffffff !important;
 }
 
 .nav-item.active {
   background: rgba(6, 182, 212, 0.2);
-  color: #ffffff;
+  color: #ffffff !important;
   font-weight: 600;
+}
+
+.nav-item.active span:not(.nav-icon):not(.nav-badge) {
+  color: #ffffff !important;
 }
 
 .nav-item.active .nav-icon {
   background: rgba(6, 182, 212, 0.3);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
 }
 

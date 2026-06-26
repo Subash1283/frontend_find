@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
+import { encryptFile } from '../utils/crypto';
 
 
 interface ProfileModalProps {
@@ -153,10 +154,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     setIsUploadingDocs(true);
     const formData = new FormData();
     formData.append('documentType', docType);
-    // Backend expects multipart fields: document + (optional) documentBack
-    // Frontend order: front first, then back.
-    if (docFiles.length >= 1) formData.append('document', docFiles[0]);
-    if (docFiles.length >= 2) formData.append('documentBack', docFiles[1]);
+    // Encrypt files before sending
+    try {
+      if (docFiles.length >= 1) {
+        const encryptedFront = await encryptFile(docFiles[0]);
+        formData.append('document', encryptedFront);
+      }
+      if (docFiles.length >= 2) {
+        const encryptedBack = await encryptFile(docFiles[1]);
+        formData.append('documentBack', encryptedBack);
+      }
+    } catch (err) {
+      console.error('Encryption failed:', err);
+      setIsUploadingDocs(false);
+      return showToast('Failed to encrypt documents before upload.', 'error');
+    }
 
     try {
       const res = await fetch(`${apiBase}/users/upload-document`, {
@@ -243,6 +255,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <input id="profile-phone" name="phone" type="text" placeholder="e.g. 98XXXXXXXX" value={phone} onChange={e => setPhone(e.target.value)} />
                 </div>
               </div>
+
               <button type="submit" disabled={isUpdatingProfile} className="btn-primary" style={{ padding: '8px 20px', fontSize: '0.8rem' }}>
                 {isUpdatingProfile ? 'Saving...' : 'Save Profile Details'}
               </button>

@@ -8,6 +8,34 @@ interface AdminPanelProps {
   openDeleteDialog: (id: number, name: string, itemType: 'item' | 'user') => void;
 }
 
+const SecureImage: React.FC<{ url: string; token: string; alt: string }> = ({ url, token, alt }) => {
+  const [src, setSrc] = useState<string>('');
+  
+  useEffect(() => {
+    let objectUrl = '';
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.blob())
+      .then(blob => {
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(err => console.error('Failed to load image', err));
+      
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url, token]);
+
+  if (!src) {
+    return (
+      <div style={{ width: '100%', height: '240px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '8px', border: '1.5px solid var(--border)' }}>
+        <i className="fas fa-circle-notch fa-spin" style={{ color: 'var(--text-soft)' }}></i>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} style={{ width: '100%', height: '240px', objectFit: 'contain', borderRadius: '8px', border: '1.5px solid var(--border)', background: '#f8fafc' }} />;
+};
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   token,
   apiBase,
@@ -70,6 +98,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const DEFAULT_SUSPEND_REASON =
     'Violation of community guidelines (e.g. fraudulent claim or inappropriate behavior)';
+
+  const [activeTab, setActiveTab] = useState<'accounts' | 'items' | 'reviews' | 'claims' | 'disputes' | 'announcements'>('accounts');
 
   const fetchUsers = async () => {
     try {
@@ -306,7 +336,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  // Filter computations
+  
   const regularUsers = users.filter(u => u.role !== 'admin');
   const totalPending = regularUsers.filter(u => getUserVerificationStatus(u) === 'pending').length;
   const totalVerified = regularUsers.filter(u => getUserVerificationStatus(u) === 'verified').length;
@@ -489,8 +519,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return {
       hasBack: isDocType,
       label: u.verificationDocumentType === 'citizenship' ? 'Citizenship Card' : u.verificationDocumentType === 'passport' ? 'Passport' : 'Driving License',
-      frontUrl: `${apiBase}/uploads/users/${u.verificationDocument}`,
-      backUrl: u.verificationDocumentBack ? `${apiBase}/uploads/users/${u.verificationDocumentBack}` : null,
+      frontUrl: `${apiBase}/users/${u.id}/verification-document?side=front`,
+      backUrl: u.verificationDocumentBack ? `${apiBase}/users/${u.id}/verification-document?side=back` : null,
     };
   };
 
@@ -520,7 +550,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       </div>
 
+      {/* TABS NAVIGATION */}
+      <div style={{
+        display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px', 
+        borderBottom: '2px solid var(--border)', paddingBottom: '16px'
+      }}>
+        {[
+          { id: 'accounts', label: 'Accounts', icon: 'fa-users-cog' },
+          { id: 'items', label: 'Items Review', icon: 'fa-box' },
+          { id: 'reviews', label: 'Reviews', icon: 'fa-star' },
+          { id: 'claims', label: 'Claims', icon: 'fa-clipboard-list' },
+          { id: 'disputes', label: 'Disputes', icon: 'fa-gavel' },
+          { id: 'announcements', label: 'Announcements', icon: 'fa-bullhorn' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === tab.id ? 'var(--accent)' : 'var(--surface-2)',
+              color: activeTab === tab.id ? '#fff' : 'var(--text-main)',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <i className={`fas ${tab.icon}`}></i> {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* FILTER TOOLBAR */}
+      {activeTab === 'accounts' && (
       <div className="admin-users-toolbar">
         <div className="search-wrap">
           <i className="fas fa-search"></i>
@@ -565,8 +632,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </button>
         </div>
       </div>
+      )}
 
       {/* ADMIN ITEMS REVIEW */}
+      {activeTab === 'items' && (
       <div className="panel-card" style={{ marginTop: '22px' }}>
 
 
@@ -730,8 +799,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           )}
         </div>
       </div>
+      )}
 
       {/* USERS ACCOUNTS TABLE */}
+      {activeTab === 'accounts' && (
       <div className="panel-card" style={{ marginTop: '22px' }}>
         <div className="panel-header">
           <i className="fas fa-users-cog"></i> Account Records
@@ -875,6 +946,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* FLOAT DETAILS POPOVER */}
       {popoverUser && (
@@ -949,6 +1021,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         const meta = getDocMeta(previewDocUser);
         if (!meta) return null;
 
+        const status = getUserVerificationStatus(previewDocUser);
+        const isPending = status === 'pending';
+
         return (
           <div className="modal active" onClick={() => setPreviewDocUser(null)} style={{ zIndex: 3000 }}>
             <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px' }}>
@@ -970,46 +1045,61 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <div style={{ flex: 1, minWidth: '260px', textAlign: 'center' }}>
                   <label style={{ marginBottom: '6px', display: 'block' }}>Front Page Scan</label>
-                  <img
-                    src={meta.frontUrl}
-                    alt="Front page document preview"
-                    style={{ width: '100%', height: '240px', objectFit: 'contain', borderRadius: '8px', border: '1.5px solid var(--border)', background: '#f8fafc' }}
-                  />
+                  <SecureImage url={meta.frontUrl} token={token} alt="Front page document preview" />
                 </div>
 
                 {meta.hasBack && meta.backUrl && (
                   <div style={{ flex: 1, minWidth: '260px', textAlign: 'center' }}>
                     <label style={{ marginBottom: '6px', display: 'block' }}>Back Page Scan</label>
-                    <img
-                      src={meta.backUrl}
-                      alt="Back page document preview"
-                      style={{ width: '100%', height: '240px', objectFit: 'contain', borderRadius: '8px', border: '1.5px solid var(--border)', background: '#f8fafc' }}
-                    />
+                    <SecureImage url={meta.backUrl} token={token} alt="Back page document preview" />
                   </div>
                 )}
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-                <button
-                  className="btn-primary"
-                  style={{ flex: 1, justifyContent: 'center' }}
-                  onClick={() => {
-                    handleVerifyUser(previewDocUser.id, 'verified');
-                    setPreviewDocUser(null);
-                  }}
-                >
-                  Approve Verification
-                </button>
-                <button
-                  className="btn-primary"
-                  style={{ flex: 1, background: 'var(--lost-bg)', color: 'var(--lost)', boxShadow: 'none', justifyContent: 'center' }}
-                  onClick={() => {
-                    handleVerifyUser(previewDocUser.id, 'rejected');
-                    setPreviewDocUser(null);
-                  }}
-                >
-                  Reject & Delete Claims
-                </button>
+                {isPending ? (
+                  <>
+                    <button
+                      className="btn-primary"
+                      style={{ flex: 1, justifyContent: 'center' }}
+                      onClick={() => {
+                        handleVerifyUser(previewDocUser.id, 'verified');
+                        setPreviewDocUser(null);
+                      }}
+                    >
+                      Approve Verification
+                    </button>
+                    <button
+                      className="btn-primary"
+                      style={{ flex: 1, background: 'var(--lost-bg)', color: 'var(--lost)', boxShadow: 'none', justifyContent: 'center' }}
+                      onClick={() => {
+                        handleVerifyUser(previewDocUser.id, 'rejected');
+                        setPreviewDocUser(null);
+                      }}
+                    >
+                      Reject & Delete Claims
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    background: status === 'verified' ? 'var(--found-bg)' : 'var(--surface-2)',
+                    color: status === 'verified' ? 'var(--found)' : 'var(--text-soft)',
+                    fontWeight: 700,
+                    border: `1px solid ${status === 'verified' ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`
+                  }}>
+                    {status === 'verified' ? (
+                      <><i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i> Verified User</>
+                    ) : (
+                      <><i className="fas fa-times-circle" style={{ marginRight: '8px' }}></i> Application Rejected</>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1017,6 +1107,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       })()}
 
       {/*REVIEWS  */}
+      {activeTab === 'reviews' && (
       <div className="panel-card" style={{ marginTop: '22px' }}>
         <div className="panel-header">
           <i className="fas fa-star"></i> Reviews Moderation
@@ -1265,8 +1356,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           })()}
         </div>
       </div>
+      )}
 
       {/* CLAIMS AUDIT LOG */}
+      {activeTab === 'claims' && (
       <div className="panel-card" style={{ marginTop: '22px' }}>
         <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span><i className="fas fa-clipboard-list"></i> Claim Requests Audit Log</span>
@@ -1407,8 +1500,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           })()}
         </div>
       </div>
+      )}
 
       {/* DISPUTES & REPORTS MANAGEMENT */}
+      {activeTab === 'disputes' && (
       <div className="panel-card" style={{ marginTop: '22px' }}>
         <div className="panel-header">
           <i className="fas fa-gavel"></i> Disputes & Reports
@@ -1645,8 +1740,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           })()}
         </div>
       </div>
+      )}
 
       {/* GLOBAL ANNOUNCEMENTS */}
+      {activeTab === 'announcements' && (
       <div className="panel-card" style={{ marginTop: '22px' }}>
         <div className="panel-header">
           <i className="fas fa-bullhorn"></i> Send Global Announcement
@@ -1691,6 +1788,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* Suspend / Unsuspend Account Modal */}
       {suspendDialog && (
@@ -1884,25 +1982,53 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               Send this announcement to all {users.length} users?
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
-             <button
-  className="btn-outline"
-  onClick={() => setShowAnnounceConfirm(false)}
-  style={{
-    flex: 1,
-    padding: '10px',
-    backgroundColor: '#f3f4f6',
-    color: '#111827',
-    border: '1px solid #d1d5db'
-  }}
->
-  Cancel
-</button>
-              <button className="btn-primary" disabled={isSendingAnnouncement} onClick={async () => {
-                setShowAnnounceConfirm(false);
-                const success = await handleSendAnnouncement();
-                setAnnounceResult(success ? 'Announcement sent successfully.' : 'Failed to send announcement.');
-              }} style={{ flex: 1, padding: '10px' }}>
-                {isSendingAnnouncement ? 'Sending...' : 'Send'}
+              <button
+                className="btn-outline"
+                onClick={() => setShowAnnounceConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '10px',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  backgroundColor: 'var(--surface-2)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                  e.currentTarget.style.color = 'var(--text-main)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--surface-2)';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-primary" 
+                disabled={isSendingAnnouncement} 
+                onClick={async () => {
+                  setShowAnnounceConfirm(false);
+                  const success = await handleSendAnnouncement();
+                  setAnnounceResult(success ? 'Announcement sent successfully.' : 'Failed to send announcement.');
+                }} 
+                style={{ 
+                  flex: 1, 
+                  padding: '12px',
+                  borderRadius: '10px',
+                  fontWeight: 600,
+                  fontSize: '0.95rem'
+                }}
+              >
+                {isSendingAnnouncement ? (
+                  <><i className="fas fa-circle-notch fa-spin" style={{ marginRight: '8px' }}></i> Sending...</>
+                ) : (
+                  <><i className="fas fa-paper-plane" style={{ marginRight: '8px' }}></i> Send</>
+                )}
               </button>
             </div>
           </div>

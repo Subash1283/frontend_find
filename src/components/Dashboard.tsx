@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import {
@@ -52,8 +52,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [verificationMessage, setVerificationMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; itemId: number | null; itemName: string; itemType: 'item' | 'user' }>({ show: false, itemId: null, itemName: '', itemType: 'item' });
   const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
-  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
+  const announcements = notifications.filter(n => n.type === 'announcement' && !n.isRead);
+  const regularNotifications = notifications.filter(n => n.type !== 'announcement');
+  const unreadNotificationsCount = regularNotifications.filter(n => !n.isRead).length;
 
   // Track verification status changes and show notification
   useEffect(() => {
@@ -61,9 +64,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     
     if (prevVerificationStatus !== null && prevVerificationStatus !== currentStatus) {
       if (currentStatus === 'verified') {
-        setVerificationMessage({ text: '🎉 Verification Successful! Your identity has been verified. You can now post and claim items.', type: 'success' });
+        setVerificationMessage({ text: ' Verification Successful! Your identity has been verified. You can now post and claim items.', type: 'success' });
       } else if (currentStatus === 'rejected') {
-        setVerificationMessage({ text: '❌ Verification Failed. Your document did not match our records. Please re-upload in Profile Settings.', type: 'error' });
+        setVerificationMessage({ text: ' Verification Failed. Your document did not match our records. Please re-upload in Profile Settings.', type: 'error' });
       }
       
       // Auto-dismiss after 10 seconds
@@ -135,6 +138,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     if (parsed.kind === 'inbox') {
       setShowInbox(true);
+      setUnreadMessagesCount(0); // Clear on open
       return;
     }
 
@@ -226,7 +230,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   // Fetch Items
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     try {
       let url = `${apiBase}/items`;
       if (viewMode === 'myItems') {
@@ -239,15 +243,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       if (res.ok) {
         const data = await res.json();
-        setItems(data);
+        // Prevent state churn by only updating if data actually changed
+        setItems(prevItems => {
+          if (JSON.stringify(prevItems) === JSON.stringify(data)) return prevItems;
+          return data;
+        });
       }
     } catch {
       showToast('Error loading items list', 'error');
     }
-  };
+  }, [apiBase, viewMode, token, showToast]);
 
   // Fetch Notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch(`${apiBase}/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -257,7 +265,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setNotifications(data);
       }
     } catch (e) {}
-  };
+  }, [apiBase, token]);
 
   const markNotificationRead = async (id: number) => {
     try {
@@ -339,12 +347,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setPendingRequestsCount(pending);
     });
 
+    socket.on('newMessage', (msg: any) => {
+      if (Number(msg.sender?.id || msg.senderId) !== Number(currentUser.id)) {
+        setUnreadMessagesCount(prev => prev + 1);
+        playSound('receive');
+        showToast(`💬 New message from ${msg.sender?.name || 'someone'}`, 'info');
+      }
+    });
+
     // Request initial inbox status
     socket.emit('getInbox');
 
-    // Fetch notifications interval (every 15s)
+    // Fetch initial notifications and let sockets handle the real-time updates
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
+    // Keep a much slower background fallback (every 2 minutes instead of 15s)
+    const interval = setInterval(fetchNotifications, 120000);
 
     return () => {
       socket.disconnect();
@@ -394,7 +411,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   useEffect(() => {
     const timeouts: ReturnType<typeof setTimeout>[] = [];
     
-    if (viewMode === 'dashboard' && !showReport && !showEdit && !showDetails && !showInbox && !showProfile && !activeChat) {
+    if (viewMode === 'dashboard') {
       // Use double setTimeout to ensure DOM is fully rendered
       timeouts.push(setTimeout(() => {
         const mapContainer = document.getElementById('map');
@@ -482,7 +499,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return () => {
       timeouts.forEach(clearTimeout);
     };
-  }, [viewMode, items, navigate, showReport, showEdit, showDetails, showInbox, showProfile, activeChat]);
+  }, [viewMode, items, navigate]);
 
   // Initialize and update Full Map View
   useEffect(() => {
@@ -624,37 +641,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Item status toggle (mark resolved)
   const handleResolveItem = async (item: any) => {
-  const isCurrentlyActive = (item.status || 'active') === 'active';
-  const nextStatus = isCurrentlyActive ? 'solved' : 'active';
-  try {
-    const res = await fetch(`${apiBase}/items/${item.id}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status: nextStatus }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      showToast(data.message || 'Failed to update status', 'error');
-      return;
-    }
-
-    showToast(`Item ${nextStatus === 'solved' ? 'solved' : 'reopened'} successfully`, 'success');
-    loadItems();
-
-    if (nextStatus === 'solved') {
-      setReviewItemId(item.id);
-      setShowPlatformReview(true);
-    }
-  } catch (error) {
-    console.error('Error updating item status:', error);
-    showToast('Error updating status', 'error');
-  }
-
-
+    const isCurrentlyActive = (item.status || 'active') === 'active';
+    const nextStatus = isCurrentlyActive ? 'solved' : 'active';
     try {
       const res = await fetch(`${apiBase}/items/${item.id}`, {
         method: 'PATCH',
@@ -684,15 +672,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  // Filter and search
-  const filteredItems = items.filter(item => {
-    const matchSearch =
-      item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.location?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchFilter = statusFilter === 'all' || item.type === statusFilter;
-    return matchSearch && matchFilter;
-  });
+  // Filter and search (memoized)
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return items.filter(item => {
+      const matchSearch =
+        item.title?.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.location?.toLowerCase().includes(query);
+      const matchFilter = statusFilter === 'all' || item.type === statusFilter;
+      return matchSearch && matchFilter;
+    });
+  }, [items, searchQuery, statusFilter]);
 
   // Sensitive details blur control state helper
   const [revealedSensitives, setRevealedSensitives] = useState<{ [key: number]: boolean }>({});
@@ -701,10 +692,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
 
 
-  // Stats computation
-  const activeCount = items.filter(i => (i.status || 'active') === 'active').length;
-  const lostCount = items.filter(i => i.type?.toLowerCase() === 'lost').length;
-  const foundCount = items.filter(i => i.type?.toLowerCase() === 'found').length;
+  // Stats computation (memoized)
+  const { activeCount, lostCount, foundCount } = useMemo(() => ({
+    activeCount: items.filter(i => (i.status || 'active') === 'active').length,
+    lostCount: items.filter(i => i.type?.toLowerCase() === 'lost').length,
+    foundCount: items.filter(i => i.type?.toLowerCase() === 'found').length,
+  }), [items]);
 
   const getVerificationStatusLabel = () => {
     const status = currentUser?.verificationStatus || (currentUser?.isVerified ? 'verified' : 'unverified');
@@ -771,12 +764,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <NavLink
             to={DASHBOARD_PATHS.inbox}
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => {
+              setSidebarOpen(false);
+              setUnreadMessagesCount(0);
+            }}
           >
             <span className="nav-icon"><i className="fas fa-envelope"></i></span>
             <span>Inbox</span>
-            {pendingRequestsCount > 0 && (
-              <span className="nav-badge">{pendingRequestsCount}</span>
+            {(pendingRequestsCount > 0 || unreadMessagesCount > 0) && (
+              <span className="nav-badge" style={{ background: 'var(--reward)', color: 'white' }}>
+                {pendingRequestsCount + unreadMessagesCount}
+              </span>
             )}
           </NavLink>
 
@@ -840,6 +838,82 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* MAIN CONTAINER */}
       <main className="main">
+        {/* Announcement Pop-up Alert */}
+        {announcements.length > 0 && (
+          <div
+            className="dialog-overlay"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 99999,
+              animation: 'fadeIn 0.2s ease-out',
+            }}
+          >
+            <div
+              className="dialog-box"
+              style={{
+                background: 'white',
+                borderRadius: '16px',
+                padding: '0',
+                maxWidth: '450px',
+                width: '90%',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
+                animation: 'scaleIn 0.3s ease-out',
+                overflow: 'hidden',
+                position: 'relative'
+              }}
+            >
+              <div style={{
+                background: 'linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)',
+                padding: '24px',
+                textAlign: 'center',
+                color: 'white'
+              }}>
+                <i className="fas fa-bullhorn" style={{ fontSize: '2.5rem', marginBottom: '12px' }}></i>
+                <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>Important Announcement</h3>
+              </div>
+              
+              <div style={{ padding: '24px', textAlign: 'center' }}>
+                <p style={{ 
+                  fontSize: '1.05rem', 
+                  color: '#334155', 
+                  lineHeight: '1.6',
+                  marginBottom: '28px',
+                  fontWeight: 500
+                }}>
+                  {announcements[0].message}
+                </p>
+                <button
+                  onClick={() => markNotificationRead(announcements[0].id)}
+                  style={{
+                    background: '#4f46e5',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 32px',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                    transition: 'transform 0.1s, background 0.2s',
+                    width: '100%'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#4338ca'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#4f46e5'}
+                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  Got it, Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <header className="top-header dash-header-v2">
           <div className="dash-header-left">
             <button
@@ -903,7 +977,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   className={`btn-primary ${isPostingLocked ? 'posting-locked' : ''}`}
                   onClick={() => {
                     if (isPostingLocked) {
-                      showToast('⚠️ Verify your identity to post items.', 'error');
+                      showToast('Please verify your identity to post items.', 'error');
                     } else {
                       navigate(DASHBOARD_PATHS.report);
                     }
@@ -1442,7 +1516,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {showNotifications && (
         <NotificationsModal
-          notifications={notifications}
+          notifications={regularNotifications}
           onClose={() => setShowNotifications(false)}
           markNotificationRead={markNotificationRead}
           markAllNotificationsRead={markAllNotificationsRead}

@@ -367,7 +367,7 @@ export const EditModal: React.FC<EditModalProps> = ({
                     <option value="passport">Passport (Requires Front Only - 1 Image)</option>
                     <option value="driving_license">Driving License (Requires Front Only - 1 Image)</option>
                     <option value="certificate">Certificate (Requires Front Only - 1 Image)</option>
-                    <option value="student_id">🎓 Student ID Card (Requires Front Only - 1 Image)</option>
+                    <option value="student_id"> Student ID Card (Requires Front Only - 1 Image)</option>
                   </select>
                 </div>
               </div>

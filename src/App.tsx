@@ -123,6 +123,7 @@ function AppContent() {
         if (userData) {
           setCurrentUser(userData);
           if (oauthToken) {
+            // Google OAuth login: show success dialog then redirect
             setGlobalSuccessDialog({
               title: 'Welcome Back!',
               message: 'Google login successful. Redirecting to your dashboard...'
@@ -131,6 +132,11 @@ function AppContent() {
               setGlobalSuccessDialog(null);
               navigate(DASHBOARD_PATHS.home, { replace: true });
             }, 1500);
+          } else {
+            const currentPath = window.location.pathname;
+            if (currentPath === '/' || currentPath === '') {
+              navigate(DASHBOARD_PATHS.home, { replace: true });
+            }
           }
         } else {
           clearSession();

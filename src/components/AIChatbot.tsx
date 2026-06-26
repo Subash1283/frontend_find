@@ -107,7 +107,6 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     } catch { /* ignore */ }
   };
 
-  /** Submit a claim request with proof message */
   const handleSubmitClaim = async (itemId: number) => {
     const proof = (proofInputs[itemId] || '').trim();
     if (!proof) {
