@@ -1,9 +1,9 @@
-
 .gateway-screen {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background-color: #030712; /* Very dark blue, almost black */
+  background-color: #030712;
+  /* Very dark blue, almost black */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -57,8 +57,10 @@
 .gateway-btn::before {
   content: '';
   position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   transition: 0.5s;
 }
@@ -87,7 +89,7 @@
   position: absolute;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -97,18 +99,33 @@
 }
 
 @keyframes gatewayFadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulseGlow {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-  100% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
 }
 
 /* Premium Layout Overrides */
 .premium-landing-body {
-  background: #030712; /* Very dark, clean tech background */
+  background: #030712;
+  /* Very dark, clean tech background */
   color: #f3f4f6;
   font-family: 'Outfit', 'Inter', sans-serif;
   min-height: 100vh;
@@ -120,7 +137,7 @@
   position: fixed;
   inset: 0;
   background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
   z-index: -2;
   mask-image: radial-gradient(circle at center, black 30%, transparent 80%);
@@ -129,7 +146,8 @@
 
 .premium-ambient-light {
   position: fixed;
-  top: 0; left: 50%;
+  top: 0;
+  left: 50%;
   transform: translateX(-50%);
   width: 80vw;
   height: 50vh;
@@ -177,9 +195,20 @@
 }
 
 @keyframes pulseDot {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
 }
 
 .premium-hero-title {
@@ -202,9 +231,17 @@
 }
 
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .premium-hero-subtitle {
@@ -227,13 +264,27 @@
   animation: heroEntryFade 1.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 
-.hero-reveal.delay-1 { animation-delay: 0.2s; }
-.hero-reveal.delay-2 { animation-delay: 0.4s; }
-.hero-reveal.delay-3 { animation-delay: 0.6s; }
-.hero-reveal.delay-4 { animation-delay: 0.8s; }
+.hero-reveal.delay-1 {
+  animation-delay: 0.2s;
+}
+
+.hero-reveal.delay-2 {
+  animation-delay: 0.4s;
+}
+
+.hero-reveal.delay-3 {
+  animation-delay: 0.6s;
+}
+
+.hero-reveal.delay-4 {
+  animation-delay: 0.8s;
+}
 
 @keyframes heroEntryFade {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Floating UI Elements */
@@ -254,13 +305,27 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   animation: floatBob 6s ease-in-out infinite;
 }
 
-.floating-card-1 { top: 20%; left: 10%; animation-delay: 0s; }
-.floating-card-2 { top: 60%; right: 12%; animation-delay: -2s; }
-.floating-card-3 { bottom: 15%; left: 20%; animation-delay: -4s; }
+.floating-card-1 {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.floating-card-2 {
+  top: 60%;
+  right: 12%;
+  animation-delay: -2s;
+}
+
+.floating-card-3 {
+  bottom: 15%;
+  left: 20%;
+  animation-delay: -4s;
+}
 
 .floating-icon {
   width: 40px;
@@ -278,12 +343,27 @@
   flex-direction: column;
 }
 
-.floating-title { font-weight: 600; color: white; font-size: 0.9rem; }
-.floating-sub { font-size: 0.75rem; color: #9ca3af; }
+.floating-title {
+  font-weight: 600;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.floating-sub {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
 
 @keyframes floatBob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
 /* Premium Buttons */
@@ -358,8 +438,11 @@
 .bento-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   opacity: 0;
   transition: 0.4s;
 }
@@ -370,17 +453,22 @@
   border-color: rgba(59, 130, 246, 0.3);
 }
 
-.bento-card:hover::before { opacity: 1; }
+.bento-card:hover::before {
+  opacity: 1;
+}
 
 .bento-card-large {
   grid-column: span 2;
 }
 
 .bento-icon {
-  width: 56px; height: 56px;
+  width: 56px;
+  height: 56px;
   background: rgba(59, 130, 246, 0.1);
   border-radius: 16px;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.8rem;
   margin-bottom: 1.5rem;
   color: #60a5fa;
@@ -432,10 +520,22 @@
 
 /* Responsive */
 @media (max-width: 900px) {
-  .bento-grid { grid-template-columns: 1fr; }
-  .bento-card-large { grid-column: span 1; }
-  .premium-stats-row { flex-direction: column; gap: 2rem; }
-  .floating-card { display: none; }
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bento-card-large {
+    grid-column: span 1;
+  }
+
+  .premium-stats-row {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .floating-card {
+    display: none;
+  }
 }
 
 .premium-social-icon {
@@ -457,4 +557,10 @@
   border-color: rgba(59, 130, 246, 0.3);
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(59, 130, 246, 0.2);
+}
+
+/* Hide native Edge/IE password reveal icon since we have a custom one */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
 }

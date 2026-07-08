@@ -187,6 +187,10 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
           return [...withoutPending, introMsg, ...cards];
         });
 
+        if (validItems.length === 1) {
+          onOpenItemDetails(validItems[0].id);
+        }
+
         lastMentionedItemIds.current = [];
       } catch {
         setMessages(prev => prev.map((msg, idx) =>
@@ -289,7 +293,20 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
         }}
       >
         {/* Contact info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div 
+          onClick={() => onOpenItemDetails(card.itemId)}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px',
+            cursor: 'pointer',
+            padding: '4px',
+            borderRadius: '8px',
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
           <div
             style={{
               width: '38px',

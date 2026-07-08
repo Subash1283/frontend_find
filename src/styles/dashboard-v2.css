@@ -64,9 +64,17 @@
   animation: toastIn 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.toast-success { background: var(--found); }
-.toast-error { background: var(--lost); }
-.toast-info { background: #1e293b; }
+.toast-success {
+  background: var(--found);
+}
+
+.toast-error {
+  background: var(--lost);
+}
+
+.toast-info {
+  background: #1e293b;
+}
 
 /* ===== Dashboard layout v2 ===== */
 .dashboard-root {

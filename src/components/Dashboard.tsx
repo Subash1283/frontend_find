@@ -31,6 +31,7 @@ interface DashboardProps {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
+// Component definition
 export const Dashboard: React.FC<DashboardProps> = ({
   token,
   currentUser,
@@ -102,7 +103,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const isPostingLocked =
     currentUser?.role !== 'admin' &&
-    (currentUser?.verificationStatus === 'rejected' || currentUser?.verificationStatus === 'unverified');
+    currentUser?.verificationStatus !== 'verified';
 
   const closeOverlay = useCallback(() => {
     navigate(viewToPath(viewMode));
@@ -351,7 +352,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (Number(msg.sender?.id || msg.senderId) !== Number(currentUser.id)) {
         setUnreadMessagesCount(prev => prev + 1);
         playSound('receive');
-        showToast(`💬 New message from ${msg.sender?.name || 'someone'}`, 'info');
+        showToast(`🔔 New message from ${msg.sender?.name || 'someone'}`, 'info');
       }
     });
 
@@ -409,58 +410,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Initialize and update Dashboard Card Map
   useEffect(() => {
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    // Ensure map is created once
+    if (!dashboardMapRef.current) {
+      const mapContainer = document.getElementById('map');
+      if (mapContainer) {
+        const map = L.map('map', { zoomControl: false }).setView([27.7172, 85.3240], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CARTO',
+          maxZoom: 19,
+        }).addTo(map);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+        dashboardMapRef.current = map;
+        
+        map.on('tileerror', (e) => {
+          console.warn('Map tile error:', e);
+        });
+      }
+    }
+
+    if (viewMode === 'dashboard' && dashboardMapRef.current) {
+      // Small timeout to allow display: block to apply before invalidating size
+      setTimeout(() => {
+        dashboardMapRef.current?.invalidateSize();
+      }, 50);
+    }
+  }, [viewMode]);
+
+  // Update Dashboard Markers when items change
+  useEffect(() => {
+    if (!dashboardMapRef.current) return;
     
-    if (viewMode === 'dashboard') {
-      // Use double setTimeout to ensure DOM is fully rendered
-      timeouts.push(setTimeout(() => {
-        const mapContainer = document.getElementById('map');
-        if (!mapContainer) return;
+    // Render markers
+    dashboardMarkersRef.current.forEach(m => dashboardMapRef.current?.removeLayer(m));
+    dashboardMarkersRef.current = [];
 
-        // Check if container has valid dimensions
-        const rect = mapContainer.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) {
-          // Container not visible yet, retry after a short delay
-          timeouts.push(setTimeout(() => {
-            const retryContainer = document.getElementById('map');
-            if (retryContainer) {
-              if (dashboardMapRef.current) {
-                dashboardMapRef.current.invalidateSize();
-              }
-            }
-          }, 100));
-          return;
-        }
-
-        if (!dashboardMapRef.current) {
-          const map = L.map('map', { zoomControl: false }).setView([27.7172, 85.3240], 13);
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CARTO',
-            maxZoom: 19,
-          }).addTo(map);
-          L.control.zoom({ position: 'topright' }).addTo(map);
-          dashboardMapRef.current = map;
-          
-          // Handle map load errors
-          map.on('tileerror', (e) => {
-            console.warn('Map tile error:', e);
-          });
-          
-          // Fix for white map issue - re-invalidate after tiles load
-          map.once('load', () => {
-            map.invalidateSize();
-          });
-        } else {
-          dashboardMapRef.current.invalidateSize();
-        }
-
-        // Render markers
-        dashboardMarkersRef.current.forEach(m => dashboardMapRef.current?.removeLayer(m));
-        dashboardMarkersRef.current = [];
-
-        items
-          .filter(i => i.latitude && i.longitude)
-          .forEach(item => {
+    items
+      .filter(i => i.latitude && i.longitude)
+      .forEach(item => {
             const icon = L.divIcon({
               className: 'custom-div-icon',
               html: `<div class="${item.type === 'lost' ? 'map-marker-lost' : 'map-marker-found'}"><i class="fas ${
@@ -493,26 +479,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             dashboardMarkersRef.current.push(marker);
           });
-      }, 200));
-    }
-    
-    return () => {
-      timeouts.forEach(clearTimeout);
-    };
-  }, [viewMode, items, navigate]);
+  }, [items, navigate]);
 
   // Initialize and update Full Map View
   useEffect(() => {
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
-
-    if (viewMode !== 'mapview') return;
-
-    timeouts.push(setTimeout(() => {
+    if (!fullMapRef.current) {
       const container = document.getElementById('fullMap');
-      if (!container) return;
-
-      // CREATE MAP ONLY ONCE
-      if (!fullMapRef.current) {
+      if (container) {
         fullMapRef.current = L.map('fullMap', {
           zoomControl: false,
         }).setView([27.7172, 85.3240], 13);
@@ -527,24 +500,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         L.control.zoom({ position: 'topright' }).addTo(fullMapRef.current);
       }
+    }
 
-      // FIX WHITE MAP ISSUE (trigger multiple reflows + redraw)
-      timeouts.push(setTimeout(() => fullMapRef.current?.invalidateSize(true), 50));
-      timeouts.push(setTimeout(() => fullMapRef.current?.invalidateSize(true), 150));
-      timeouts.push(setTimeout(() => {
-        // Force Leaflet to recompute view and re-render
+    if (viewMode === 'mapview' && fullMapRef.current) {
+      setTimeout(() => {
         fullMapRef.current?.invalidateSize(true);
-        fullMapRef.current?.panTo(fullMapRef.current.getCenter(), { animate: false });
-      }, 300));
+      }, 50);
+    }
+  }, [viewMode]);
 
-      // CLEAR OLD MARKERS
-      fullMarkersRef.current.forEach(m => fullMapRef.current?.removeLayer(m));
-      fullMarkersRef.current = [];
+  // Update Full Map Markers
+  useEffect(() => {
+    if (!fullMapRef.current) return;
+    
+    // CLEAR OLD MARKERS
+    fullMarkersRef.current.forEach(m => fullMapRef.current?.removeLayer(m));
+    fullMarkersRef.current = [];
 
-      // ADD MARKERS
-      items
-        .filter(i => i.latitude && i.longitude)
-        .forEach(item => {
+    // ADD MARKERS
+    items
+      .filter(i => i.latitude && i.longitude)
+      .forEach(item => {
           const icon = L.divIcon({
             className: 'custom-div-icon',
             html: `
@@ -581,12 +557,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           fullMarkersRef.current.push(marker);
         });
-    }, 200));
-
-    return () => {
-      timeouts.forEach(clearTimeout);
-    };
-  }, [viewMode, items, navigate]);
+  }, [items, navigate]);
 
   // Item card deletion - opens confirmation dialog
   const openDeleteDialog = (id: number, name: string, itemType: 'item' | 'user' = 'item') => {
@@ -977,7 +948,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   className={`btn-primary ${isPostingLocked ? 'posting-locked' : ''}`}
                   onClick={() => {
                     if (isPostingLocked) {
-                      showToast('Please verify your identity to post items.', 'error');
+                      showToast(
+                        currentUser?.verificationStatus === 'pending'
+                          ? 'Your identity verification is under review. Posting will be enabled once approved.'
+                          : 'Please verify your identity to post items.',
+                        'error',
+                      );
                     } else {
                       navigate(DASHBOARD_PATHS.report);
                     }
@@ -992,7 +968,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {isPostingLocked && viewMode === 'dashboard' && (
           <div className="posting-locked-banner visible">
-            ⚠️ <strong>Posting Restrictions Active:</strong> To prevent fraud, you must complete your identity document verification in Profile Settings before submitting reports.
+            ⚠️ <strong>Posting Restrictions Active:</strong>{' '}
+            {currentUser?.verificationStatus === 'pending'
+              ? 'Your identity document is under manual review. You will be able to post once an admin approves your verification.'
+              : 'To prevent fraud, you must complete your identity document verification in Profile Settings before submitting reports.'}
           </div>
         )}
 
@@ -1048,7 +1027,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
 
         {/* 1. MAIN DASHBOARD VIEW */}
-    {(viewMode === 'dashboard' || viewMode === 'myItems') && (
+        <div style={{ display: (viewMode === 'dashboard' || viewMode === 'myItems') ? 'block' : 'none' }}>
           <>
             {/* STATS PANEL */}
             <section className="stats-grid stats-grid-v2">
@@ -1248,10 +1227,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               )}
             </section>
           </>
-        )}
+        </div>
 
         {/* 2. FULL GEO-MAP SECTION */}
-        {viewMode === 'mapview' && (
+        <div style={{ display: viewMode === 'mapview' ? 'block' : 'none' }}>
 
           <section
             className="panel-card"
@@ -1264,7 +1243,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div id="fullMap" style={{ height: '100%', width: '100%', borderRadius: 0 }}></div>
             </div>
           </section>
-        )}
+        </div>
 
         {/* 3. ADMIN INTERFACES */}
         {viewMode === 'admin' && currentUser?.role === 'admin' && (
@@ -1520,6 +1499,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
           onClose={() => setShowNotifications(false)}
           markNotificationRead={markNotificationRead}
           markAllNotificationsRead={markAllNotificationsRead}
+          onNavigate={(link) => {
+            setShowNotifications(false);
+            // If the link is an internal dashboard path or inbox, navigate there
+            if (link === '/dashboard/inbox' || link === '/inbox') {
+              navigate(DASHBOARD_PATHS.inbox);
+            } else if (link.startsWith('/items/')) {
+              // Convert backend /items/id to frontend /dashboard/item/id
+              const itemId = link.split('/')[2];
+              navigate(DASHBOARD_PATHS.item(itemId));
+            } else {
+              navigate(link);
+            }
+          }}
         />
       )}
     </div>

@@ -5,6 +5,7 @@ interface NotificationsModalProps {
   onClose: () => void;
   markNotificationRead: (id: number) => void;
   markAllNotificationsRead: () => void;
+  onNavigate?: (link: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -12,6 +13,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onClose,
   markNotificationRead,
   markAllNotificationsRead,
+  onNavigate,
 }) => {
   return (
     <div className="modal active" onClick={onClose} style={{ zIndex: 1200 }}>
@@ -70,7 +72,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 key={notif.id}
                 className="alert-item"
                 style={{ 
-                  cursor: notif.isRead ? 'default' : 'pointer', 
+                  cursor: 'pointer', 
                   padding: '12px 16px', 
                   background: 'var(--bg-secondary)', 
                   borderRadius: '8px', 
@@ -83,12 +85,15 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 }}
                 onClick={() => {
                   if (!notif.isRead) markNotificationRead(notif.id);
+                  if (notif.link && onNavigate) {
+                    onNavigate(notif.link);
+                  }
                 }}
                 onMouseEnter={e => {
-                  if (!notif.isRead) e.currentTarget.style.background = 'var(--border-soft)';
+                  e.currentTarget.style.background = 'var(--border-soft)';
                 }}
                 onMouseLeave={e => {
-                  if (!notif.isRead) e.currentTarget.style.background = 'var(--bg-secondary)';
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
                 }}
               >
                 <i className="fas fa-bolt" style={{ color: 'var(--reward)', marginTop: '3px' }}></i>

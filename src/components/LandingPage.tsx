@@ -9,7 +9,7 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSuccess, showToast }) => {
-  const [hasEntered, setHasEntered] = useState(false);
+  const [hasEntered, setHasEntered] = useState(() => sessionStorage.getItem('findit_has_entered') === 'true');
   const [isModalActive, setIsModalActive] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'reset'>('login');
   const [infoModalContent, setInfoModalContent] = useState<{title: string, body: string} | null>(null);
@@ -91,6 +91,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [platformReviews, setPlatformReviews] = useState<any[]>([]);
 
   useEffect(() => {
+    // Reset scroll position on mount
+    window.scrollTo(0, 0);
+
     const fetchPlatformReviews = async () => {
       try {
         const res = await fetch(`${apiBase}/reviews/platform`);
@@ -712,7 +715,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         <div className="gateway-bg-glow"></div>
         <div className="gateway-logo-container">
           <div className="gateway-logo">FINDIT</div>
-          <button className="gateway-btn" onClick={() => setHasEntered(true)}>
+          <button className="gateway-btn" onClick={() => { setHasEntered(true); sessionStorage.setItem('findit_has_entered', 'true'); }}>
             Enter Experience
           </button>
           {/* <div className="gateway-hint">Sound Off</div> */}
