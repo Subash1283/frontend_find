@@ -194,6 +194,17 @@ body {
   }
 }
 
+@keyframes typingDot {
+  0%, 80%, 100% {
+    transform: scale(0.3) translateY(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1.1) translateY(-4px);
+    opacity: 1;
+  }
+}
+
 /* ==========================================================================
    LANDING PAGE STYLES
    ========================================================================== */

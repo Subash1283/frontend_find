@@ -30,13 +30,19 @@ interface ChatMessage {
 
 /** Extract all item IDs mentioned as [ID:N] or (ID:N) from a string */
 function extractItemIds(text: string): number[] {
-  const matches = [...text.matchAll(/[\(\[]ID:(\d+)[\)\]]/gi)];
+  const matches = [...text.matchAll(/[\(\[]ID:\s*(\d+)[\)\]]/gi)];
   return [...new Set(matches.map(m => parseInt(m[1], 10)))];
 }
 
 /** Returns true if the text sounds like a confirmation or a request to contact */
 function isConfirmation(text: string): boolean {
   const t = text.trim().toLowerCase();
+  
+  // Prevent false positives on negative phrases ("not mine", "no", "incorrect")
+  if (/\b(no|not mine|isn'?t mine|not it|incorrect|wrong|none|doesn'?t match)\b/.test(t)) {
+    return false;
+  }
+
   const isConfirm = /\b(yes|yeah|yep|yup|correct|that'?s (mine|my|it)|it'?s mine|found it|match(es)?|confirmed?|that is mine|this is mine|mine|absolutely|right|exactly|affirmative)\b/.test(t);
   const isContactRequest = /\b(how (can|do|to) (i|we) (contact|reach|message|chat|get)|contact (him|her|them|owner|finder)|chat with|message (him|her|them))\b/.test(t);
   return isConfirm || isContactRequest;
@@ -170,7 +176,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
           const withoutPending = prev.slice(0, -1);
           const introMsg: ChatMessage = {
             sender: 'bot',
-            text: `🎉 Here ${validItems.length === 1 ? 'is the contact' : 'are the contacts'} for the matching items:`,
+            text: `Here ${validItems.length === 1 ? 'is the contact' : 'are the contacts'} for the matching items:`,
           };
           const cards: ChatMessage[] = validItems.map(item => ({
             sender: 'bot' as const,
@@ -237,10 +243,19 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     }
   };
 
+  // Parse basic markdown like **bold** and bullet points
+  const renderMarkdown = (text: string) => {
+    const processedText = text.replace(/(^|\n)([\*\-] )\s*/g, '$1• ');
+    const parts = processedText.split(/\*\*(.*?)\*\*/g);
+    return parts.map((part, i) => (
+      i % 2 === 1 ? <strong key={i}>{part}</strong> : <React.Fragment key={i}>{part}</React.Fragment>
+    ));
+  };
+
   // Parse text containing "[ID:123]" into clickable buttons
   const renderMessageText = (text: string) => {
-    const parts = text.split(/[\(\[]ID:(\d+)[\)\]]/gi);
-    if (parts.length === 1) return text;
+    const parts = text.split(/[\(\[]ID:\s*(\d+)[\)\]]/gi);
+    if (parts.length === 1) return renderMarkdown(text);
 
     return parts.map((part, idx) => {
       if (idx % 2 === 1) {
@@ -266,7 +281,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
           </button>
         );
       }
-      return part;
+      return <React.Fragment key={idx}>{renderMarkdown(part)}</React.Fragment>;
     });
   };
 
@@ -346,7 +361,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
             {isIdle && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <p style={{ fontSize: '0.78rem', color: 'var(--text-soft)', margin: 0 }}>
-                  🔐 To contact this finder, send a claim request with proof. Chat unlocks once they accept.
+                  To contact this finder, send a claim request with proof. Chat unlocks once they accept.
                 </p>
 
                 {!proofFormOpen[card.itemId] ? (
@@ -505,7 +520,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     <div className={`chatbot-widget ${isOpen ? 'open' : ''}`} id="chatbotWidget">
       {/* HEADER */}
       <div className="chatbot-header" onClick={() => setIsOpen(!isOpen)}>
-        <span>💬 FindIT Assistant AI</span>
+        <span>FindIT Assistant AI</span>
         <i id="chatbotToggleIcon" className={`fas ${isOpen ? 'fa-chevron-down' : 'fa-chevron-up'}`}></i>
       </div>
 
@@ -518,9 +533,11 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
             style={{ whiteSpace: 'pre-wrap' }}
           >
             {msg.isPending ? (
-              <span>
-                <i className="fas fa-circle-notch fa-spin" style={{ marginRight: '6px' }}></i> Analyzing...
-              </span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 2px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.32s' }}></span>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.16s' }}></span>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both' }}></span>
+              </div>
             ) : msg.contactCard ? (
               renderContactCard(msg.contactCard)
             ) : (
