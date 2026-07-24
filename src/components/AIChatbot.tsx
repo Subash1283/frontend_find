@@ -171,6 +171,16 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
         // Initialize claim states for FOUND items
         await Promise.all(validItems.map(item => checkAndInitClaimState(item)));
 
+        let inboxData: any[] = [];
+        try {
+          const inboxRes = await fetch(`${apiBase}/chat/inbox`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (inboxRes.ok) {
+            inboxData = await inboxRes.json();
+          }
+        } catch (e) { /* ignore */ }
+
         // Replace pending with contact cards
         setMessages(prev => {
           const withoutPending = prev.slice(0, -1);
@@ -178,18 +188,30 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
             sender: 'bot',
             text: `Here ${validItems.length === 1 ? 'is the contact' : 'are the contacts'} for the matching items:`,
           };
-          const cards: ChatMessage[] = validItems.map(item => ({
-            sender: 'bot' as const,
-            text: '',
-            contactCard: {
-              itemId: item.id,
-              itemTitle: item.title,
-              contactName: item.user?.name || 'Unknown',
-              contactRole: item.type === 'lost' ? 'Owner' : 'Finder',
-              contactEmail: item.user?.email,
-              contactUserId: item.user?.id,
-            },
-          }));
+          const cards: ChatMessage[] = validItems.map(item => {
+            const existingConv = inboxData.find(c => c.item?.id === item.id);
+            const contactUserId = existingConv ? existingConv.otherUser?.id : item.user?.id;
+            const contactName = existingConv ? (existingConv.otherUser?.name || 'Unknown') : (item.user?.name || 'Unknown');
+            const contactEmail = existingConv ? existingConv.otherUser?.email : item.user?.email;
+            
+            let contactRole = item.type === 'lost' ? 'Owner' : 'Finder';
+            if (existingConv && item.user?.id !== contactUserId) {
+              contactRole = item.type === 'lost' ? 'Finder' : 'Owner';
+            }
+
+            return {
+              sender: 'bot' as const,
+              text: '',
+              contactCard: {
+                itemId: item.id,
+                itemTitle: item.title,
+                contactName,
+                contactRole: contactRole as 'Owner' | 'Finder',
+                contactEmail,
+                contactUserId,
+              },
+            };
+          });
           return [...withoutPending, introMsg, ...cards];
         });
 

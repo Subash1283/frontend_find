@@ -99,6 +99,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const DEFAULT_SUSPEND_REASON =
     'Violation of community guidelines (e.g. fraudulent claim or inappropriate behavior)';
 
+  const [messageDialog, setMessageDialog] = useState<{
+    receiverId: number;
+    itemId: number;
+    userName: string;
+  } | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'accounts' | 'items' | 'reviews' | 'claims' | 'disputes' | 'announcements'>('accounts');
 
   const fetchUsers = async () => {
@@ -153,6 +161,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         showToast('Failed to update dispute', 'error');
       }
     } catch { showToast('Connection error', 'error'); }
+  };
+
+  const handleAdminMessage = (receiverId: number, itemId: number, userName: string) => {
+    setMessageDialog({ receiverId, itemId, userName });
+    setMessageText('');
+  };
+
+  const confirmSendAdminMessage = async () => {
+    if (!messageDialog || !messageText.trim()) return;
+    setIsSendingMessage(true);
+
+    try {
+      const res = await fetch(`${apiBase}/chat/send`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          receiverId: messageDialog.receiverId,
+          itemId: messageDialog.itemId,
+          content: messageText.trim()
+        })
+      });
+      if (res.ok) {
+        showToast(`Message sent to ${messageDialog.userName} successfully!`, 'success');
+        setMessageDialog(null);
+        setMessageText('');
+      } else {
+        showToast('Failed to send message', 'error');
+      }
+    } catch {
+      showToast('Connection error', 'error');
+    } finally {
+      setIsSendingMessage(false);
+    }
   };
 
   const handleSendAnnouncement = async () => {
@@ -1664,38 +1705,60 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '6px', marginTop: '4px', fontSize: '0.78rem', flexWrap: 'wrap' }}>
                       {dispute.item?.user?.id && dispute.item.user.role !== 'admin' && (
-                        <button
-                          className="icon-btn"
-                          style={{ padding: '4px 10px', color: '#b91c1c' }}
-                          onClick={() =>
-                            handleSuspendUser(
-                              dispute.item.user.id,
-                              dispute.item.user.name || dispute.item.user.email || 'Item owner',
-                              !dispute.item.user.isSuspended,
-                            )
-                          }
-                          title="Suspend the reported item owner"
-                        >
-                          <i className={`fas ${dispute.item.user.isSuspended ? 'fa-unlock' : 'fa-ban'}`}></i>
-                          {dispute.item.user.isSuspended ? 'Unsuspend Owner' : 'Suspend Owner'}
-                        </button>
+                        <>
+                          <button
+                            className="icon-btn"
+                            style={{ padding: '4px 10px', color: '#b91c1c' }}
+                            onClick={() =>
+                              handleSuspendUser(
+                                dispute.item.user.id,
+                                dispute.item.user.name || dispute.item.user.email || 'Item owner',
+                                !dispute.item.user.isSuspended,
+                              )
+                            }
+                            title="Suspend the reported item owner"
+                          >
+                            <i className={`fas ${dispute.item.user.isSuspended ? 'fa-unlock' : 'fa-ban'}`}></i>
+                            {dispute.item.user.isSuspended ? 'Unsuspend Owner' : 'Suspend Owner'}
+                          </button>
+                          <button
+                            className="icon-btn"
+                            style={{ padding: '4px 10px', color: '#0369a1' }}
+                            onClick={() => handleAdminMessage(dispute.item.user.id, dispute.item.id, dispute.item.user.name || 'Item Owner')}
+                            title="Message Owner"
+                          >
+                            <i className="fas fa-comment-dots"></i> Message Owner
+                          </button>
+                        </>
                       )}
                       {dispute.reporter?.id && dispute.reporter.role !== 'admin' && (
-                        <button
-                          className="icon-btn"
-                          style={{ padding: '4px 10px', color: '#b91c1c' }}
-                          onClick={() =>
-                            handleSuspendUser(
-                              dispute.reporter.id,
-                              dispute.reporter.name || dispute.reporter.email || 'Reporter',
-                              !dispute.reporter.isSuspended,
-                            )
-                          }
-                          title="Suspend the user who filed this report"
-                        >
-                          <i className={`fas ${dispute.reporter.isSuspended ? 'fa-unlock' : 'fa-ban'}`}></i>
-                          {dispute.reporter.isSuspended ? 'Unsuspend Reporter' : 'Suspend Reporter'}
-                        </button>
+                        <>
+                          <button
+                            className="icon-btn"
+                            style={{ padding: '4px 10px', color: '#b91c1c' }}
+                            onClick={() =>
+                              handleSuspendUser(
+                                dispute.reporter.id,
+                                dispute.reporter.name || dispute.reporter.email || 'Reporter',
+                                !dispute.reporter.isSuspended,
+                              )
+                            }
+                            title="Suspend the user who filed this report"
+                          >
+                            <i className={`fas ${dispute.reporter.isSuspended ? 'fa-unlock' : 'fa-ban'}`}></i>
+                            {dispute.reporter.isSuspended ? 'Unsuspend Reporter' : 'Suspend Reporter'}
+                          </button>
+                          {dispute.item && (
+                            <button
+                              className="icon-btn"
+                              style={{ padding: '4px 10px', color: '#0369a1' }}
+                              onClick={() => handleAdminMessage(dispute.reporter.id, dispute.item.id, dispute.reporter.name || 'Reporter')}
+                              title="Message Reporter"
+                            >
+                              <i className="fas fa-comment-dots"></i> Message Reporter
+                            </button>
+                          )}
+                        </>
                       )}
                       {dispute.status === 'pending' && (
                         <>
@@ -2028,6 +2091,78 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <><i className="fas fa-circle-notch fa-spin" style={{ marginRight: '8px' }}></i> Sending...</>
                 ) : (
                   <><i className="fas fa-paper-plane" style={{ marginRight: '8px' }}></i> Send</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Message Modal */}
+      {messageDialog && (
+        <div className="modal active" onClick={() => setMessageDialog(null)} style={{ backgroundColor: 'rgba(0,0,0,0.6)', animation: 'fadeIn 0.2s ease-out', zIndex: 10000 }}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px', padding: '2rem', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid var(--border)', animation: 'slideUp 0.3s ease-out' }}>
+            <h3 style={{ marginBottom: '1rem', fontSize: '1.3rem', fontWeight: '600', color: '#0f172a' }}>
+              Message {messageDialog.userName}
+            </h3>
+            <p style={{ marginBottom: '1rem', color: 'var(--text-soft)', fontSize: '0.9rem' }}>
+              Send a direct message to this user. It will appear in their inbox.
+            </p>
+            <textarea
+              rows={4}
+              placeholder={`Write your message to ${messageDialog.userName}...`}
+              value={messageText}
+              onChange={e => setMessageText(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--text-main)',
+                fontSize: '0.9rem',
+                resize: 'vertical',
+                marginBottom: '1rem',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                className="btn-outline"
+                onClick={() => setMessageDialog(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '10px',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  backgroundColor: 'var(--surface-2)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-primary" 
+                disabled={isSendingMessage || !messageText.trim()} 
+                onClick={confirmSendAdminMessage} 
+                style={{ 
+                  flex: 1, 
+                  padding: '12px',
+                  borderRadius: '10px',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                {isSendingMessage ? (
+                  <><i className="fas fa-circle-notch fa-spin"></i> Sending...</>
+                ) : (
+                  <><i className="fas fa-paper-plane"></i> Send</>
                 )}
               </button>
             </div>

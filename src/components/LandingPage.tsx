@@ -730,7 +730,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
           </div>
           <h1 className={`premium-hero-title ${hasEntered ? 'hero-reveal delay-2' : 'hero-standby'}`}>
             Never Lose What <br />
-            <span className="premium-text-gradient">Matters Most.</span>
+            Matters Most.
           </h1>
           <p className={`premium-hero-subtitle ${hasEntered ? 'hero-reveal delay-3' : 'hero-standby'}`}>
             Join thousands recovering lost items through our smart community platform. 
@@ -749,7 +749,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
               Get Started 
             </button>
             <button className="premium-btn-secondary" onClick={handleLearnMore}>
-              Watch Demo
+              Working Demo
             </button>
           </div>
 
