@@ -2619,6 +2619,7 @@ input[type="file"] {
   align-self: flex-start;
   border-bottom-left-radius: 4px;
   color: var(--text-main);
+  text-align: justify;
 }
 
 .chat-message.user {

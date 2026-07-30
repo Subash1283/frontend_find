@@ -302,7 +302,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
               {vStatus === 'verified' ? (
                 <div style={{ background: 'var(--found-bg)', color: 'var(--found)', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid rgba(16,185,129,0.3)' }}>
-                  🎉 Your account has been verified. You now have full access to publish posts and make claims on Findit.
+                   Your account has been verified. You now have full access to publish posts and make claims on Findit.
                 </div>
               ) : vStatus === 'pending' ? (
                 <div style={{ background: 'var(--reward-bg)', color: '#b45309', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid rgba(245,158,11,0.3)' }}>
@@ -320,7 +320,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         <option value="citizenship">Citizenship Card (requires front + back)</option>
                         <option value="passport">Passport (requires front scan only)</option>
                         <option value="driving_license">Driver's License (requires front + back)</option>
-                        <option value="student_id">🎓 Student ID Card (requires front only)</option>
+                        <option value="student_id">Student ID Card (requires front only)</option>
                       </select>
                     </div>
                   </div>

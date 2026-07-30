@@ -265,12 +265,27 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     }
   };
 
-  // Parse basic markdown like **bold** and bullet points
+  // Parse basic markdown like **bold**, bullet points, and newlines
   const renderMarkdown = (text: string) => {
-    const processedText = text.replace(/(^|\n)([\*\-] )\s*/g, '$1• ');
-    const parts = processedText.split(/\*\*(.*?)\*\*/g);
-    return parts.map((part, i) => (
-      i % 2 === 1 ? <strong key={i}>{part}</strong> : <React.Fragment key={i}>{part}</React.Fragment>
+    const normalizedText = text.replace(/\r\n/g, '\n');
+    const processedText = normalizedText.replace(/(^|\n)([\*\-] )\s*/g, '$1• ');
+    
+    const paragraphs = processedText.split(/\n{2,}/);
+    
+    return paragraphs.map((paragraph, pIdx) => (
+      <div key={pIdx} style={{ marginBottom: pIdx < paragraphs.length - 1 ? '12px' : '0' }}>
+        {paragraph.split('\n').map((line, lineIdx, arr) => {
+          const parts = line.split(/\*\*(.*?)\*\*/g);
+          return (
+            <React.Fragment key={lineIdx}>
+              {parts.map((part, i) => (
+                i % 2 === 1 ? <strong key={i}>{part}</strong> : <React.Fragment key={i}>{part}</React.Fragment>
+              ))}
+              {lineIdx < arr.length - 1 && <br />}
+            </React.Fragment>
+          );
+        })}
+      </div>
     ));
   };
 
@@ -552,7 +567,6 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
           <div
             key={idx}
             className={`chat-message ${msg.sender === 'user' ? 'user' : 'bot'}`}
-            style={{ whiteSpace: 'pre-wrap' }}
           >
             {msg.isPending ? (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 2px' }}>

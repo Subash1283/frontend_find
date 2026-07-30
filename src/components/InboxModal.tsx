@@ -64,7 +64,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
       <div className="modal-card" onClick={e => e.stopPropagation()}>
         <div className="inbox-header">
           <h3>
-            <span>📬 Message Center</span>
+            <span> Message Center</span>
             <button className="modal-close" onClick={onClose}>
               &times;
             </button>

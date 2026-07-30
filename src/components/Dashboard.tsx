@@ -1415,7 +1415,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 marginBottom: '24px',
                 lineHeight: '1.5',
               }}>
-                Are you sure you want to permanently delete <strong style={{ color: '#000' }}>"{deleteConfirm.itemName}"</strong>? This action cannot be undone.
+                <strong>Are you sure you want to permanently delete <span style={{ color: '#000' }}>"{deleteConfirm.itemName}"</span>? This action cannot be undone.</strong>
               </p>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
