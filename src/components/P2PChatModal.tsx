@@ -50,15 +50,38 @@ export const P2PChatModal: React.FC<P2PChatModalProps> = ({
 
 
   useEffect(() => {
-    if (!socket) return;
+    // REST API fetch for instant history loading & fallback
+    const fetchHistoryRest = async () => {
+      try {
+        const res = await fetch(`${apiBase}/chat/history/${itemId}/${otherUserId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(prev => {
+            const newMsgs = data?.messages || [];
+            if (JSON.stringify(prev) === JSON.stringify(newMsgs)) return prev;
+            return newMsgs;
+          });
 
-  
-    console.log('[P2PChatModal] socket connected, waiting for events', {
-      itemId,
-      otherUserId,
-    });
+          if (data?.conversation) {
+            setConversationStatus(data.conversation.status ?? null);
+            const ownerId = data.conversation.ownerId ?? data.conversation.owner?.id;
+            setConversationOwnerId(ownerId != null ? Number(ownerId) : null);
+          }
+        }
+      } catch (err) {
+        console.warn('[P2PChatModal] REST fetch failed:', err);
+      }
+    };
 
-  
+    // Initial fetch via REST to eliminate delay
+    fetchHistoryRest();
+
+    if (socket) {
+      socket.emit('getHistory', { itemId: Number(itemId), otherUserId: Number(otherUserId) });
+    }
+
     const handleHistory = (data: { messages: any[]; conversation: any | null }) => {
       console.log('[P2PChatModal] History received:', data);
       setMessages(data?.messages || []);
@@ -79,41 +102,28 @@ export const P2PChatModal: React.FC<P2PChatModalProps> = ({
     const handleMessage = (msg: any) => {
       console.log('[P2PChatModal] Message received:', msg);
 
+      const senderId = Number(msg.sender?.id ?? msg.senderId ?? msg.sender);
+      const receiverId = Number(msg.receiver?.id ?? msg.receiverId ?? msg.receiver);
+      const msgItemId = Number(msg.itemId);
 
-      const matchesItem = Number(msg.itemId) === Number(itemId);
-      const matchesReceiver = Number(msg.receiver?.id) === Number(currentUser.id) ||
-        Number(msg.receiver?.id) === Number(otherUserId);
-      const matchesSender = Number(msg.sender?.id) === Number(otherUserId) ||
-        Number(msg.sender?.id) === Number(currentUser.id);
-
-     
-      const isThisChat = matchesItem && (matchesSender || matchesReceiver);
+      const isThisChat =
+        msgItemId === Number(itemId) &&
+        ((senderId === Number(otherUserId) && receiverId === Number(currentUser.id)) ||
+         (senderId === Number(currentUser.id) && receiverId === Number(otherUserId)) ||
+         senderId === Number(otherUserId) || receiverId === Number(otherUserId));
 
       if (isThisChat) {
         console.log('[P2PChatModal] Message belongs to this chat, adding to UI');
         playSound('receive');
         setMessages(prev => {
-          if (prev.some(m => m.id === msg.id)) return prev;
+          if (prev.some(m => m.id && m.id === msg.id)) return prev;
           return [...prev, msg];
         });
         scrollToBottom();
-        socket.emit('getInbox');
-      } else {
-        console.log('[P2PChatModal] Message rejected - doesn\'t belong to this chat', {
-          matchesItem,
-          matchesReceiver,
-          matchesSender,
-          msgItemId: msg.itemId,
-          currentItemId: itemId,
-          msgReceiverId: msg.receiver?.id,
-          msgSenderId: msg.sender?.id,
-          otherUserId,
-          currentUserId: currentUser.id
-        });
+        if (socket) socket.emit('getInbox');
       }
     };
 
-    
     const handleRequestStatus = (data: { itemId: number; initiatorId: number; status: 'accepted' | 'declined' }) => {
       console.log('[P2PChatModal] Request status changed:', data);
       if (Number(data.itemId) === Number(itemId) && Number(data.initiatorId) === Number(otherUserId)) {
@@ -121,32 +131,40 @@ export const P2PChatModal: React.FC<P2PChatModalProps> = ({
         if (data.status === 'accepted') {
           showToast(`Chat request accepted!`, 'success');
         }
-        socket.emit('getInbox');
+        if (socket) socket.emit('getInbox');
       }
     };
 
-  
     const handleChatError = (data: { message: string }) => {
       showToast(data.message || 'Chat error occurred.', 'error');
     };
 
-    
-    socket.on('chatHistory', handleHistory);
-    socket.on('newMessage', handleMessage);
-    socket.on('requestStatusChanged', handleRequestStatus);
-    socket.on('chatError', handleChatError);
+    if (socket) {
+      socket.on('chatHistory', handleHistory);
+      socket.on('newMessage', handleMessage);
+      socket.on('requestStatusChanged', handleRequestStatus);
+      socket.on('chatError', handleChatError);
+    }
 
-   
-    socket.emit('getHistory', { itemId: Number(itemId), otherUserId: Number(otherUserId) });
+    // Set up 3-second live auto-refresh polling so messages sync continuously without page refreshes
+    const pollInterval = setInterval(() => {
+      if (socket && socket.connected) {
+        socket.emit('getHistory', { itemId: Number(itemId), otherUserId: Number(otherUserId) });
+      } else {
+        fetchHistoryRest();
+      }
+    }, 3000);
 
-  
     return () => {
-      socket.off('chatHistory', handleHistory);
-      socket.off('newMessage', handleMessage);
-      socket.off('requestStatusChanged', handleRequestStatus);
-      socket.off('chatError', handleChatError);
+      clearInterval(pollInterval);
+      if (socket) {
+        socket.off('chatHistory', handleHistory);
+        socket.off('newMessage', handleMessage);
+        socket.off('requestStatusChanged', handleRequestStatus);
+        socket.off('chatError', handleChatError);
+      }
     };
-  }, [socket, itemId, otherUserId, currentUser.id]); 
+  }, [socket, itemId, otherUserId, currentUser.id, apiBase, token]); 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (

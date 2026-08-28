@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/premium-landing.css';
 import { SuspendedAccountModal, parseSuspensionReason } from './SuspendedAccountModal';
+import { validateEmailAuthenticity, getEmailDomainSuggestions } from '../utils/emailValidation';
+
+import backpackImg from '../assets/blue_backpack.png';
+import headphonesImg from '../assets/beige_headphones.png';
+import walletImg from '../assets/brown_wallet.png';
+
+import catElectronicsImg from '../assets/category_electronics.png';
+import catDocumentsImg from '../assets/category_documents.png';
+import catKeysImg from '../assets/category_keys.png';
+import catBagsImg from '../assets/category_bags.png';
+import catJewelryImg from '../assets/category_jewelry.png';
 
 interface LandingPageProps {
   apiBase: string;
@@ -29,6 +40,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirm, setRegConfirm] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [regStatus, setRegStatus] = useState<{ text: string; type: 'success' | 'error' | '' }>({ text: '', type: '' });
   const [isRegistering, setIsRegistering] = useState(false);
 
@@ -54,10 +66,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState({ pct: '0%', color: 'transparent', text: 'Password strength' });
-  const [registerPasswordStrength, setRegisterPasswordStrength] = useState({ pct: '0%', color: 'transparent', text: 'Password strength' });
+  const [passwordStrength, setPasswordStrength] = useState({ pct: '0%', color: 'transparent', text: '' });
+  const [registerPasswordStrength, setRegisterPasswordStrength] = useState({ pct: '0%', color: 'transparent', text: '' });
   const [resetPassStatus, setResetPassStatus] = useState<{ text: string; type: 'success' | 'error' | '' }>({ text: '', type: '' });
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Magic Login Link states
+  const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
+  const [magicLinkResult, setMagicLinkResult] = useState<{ message: string; magicLink?: string } | null>(null);
+
+  const handleSendMagicLink = async () => {
+    if (!loginEmail.trim()) {
+      showStatus(setLoginStatus, '❌ Please enter your email address first', 'error');
+      return;
+    }
+    setIsSendingMagicLink(true);
+    setMagicLinkResult(null);
+    try {
+      const res = await fetch(`${apiBase}/auth/send-magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMagicLinkResult(data);
+        showStatus(setLoginStatus, '✉️ Magic login link sent to your email!', 'success');
+      } else {
+        showStatus(setLoginStatus, data.message || 'Failed to send magic link.', 'error');
+      }
+    } catch {
+      showStatus(setLoginStatus, '⚠️ Connection error to backend', 'error');
+    } finally {
+      setIsSendingMagicLink(false);
+    }
+  };
 
   // Advanced features state
   const [statsVisible, setStatsVisible] = useState(false);
@@ -187,7 +230,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
 
 
   const validateGmail = (email: string) => {
-    return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email.trim());
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   };
 
   const showStatus = (
@@ -213,7 +256,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     const email = loginEmail.trim();
     const password = loginPassword;
     if (!email || !password) return showStatus(setLoginStatus, '❌ Please fill email and password', 'error');
-    if (!validateGmail(email)) return showStatus(setLoginStatus, '❌ Must use a valid Gmail address', 'error');
+    if (!validateGmail(email)) return showStatus(setLoginStatus, '❌ Please enter a valid email address', 'error');
 
     setIsLoggingIn(true);
     setLoginStatus({ text: 'Logging in...', type: 'success' });
@@ -225,12 +268,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
       });
       const data = await res.json();
       if (res.ok && data.access_token) {
-        setSuccessDialogContent({ title: 'Welcome Back!', message: 'Login successful. Redirecting to your dashboard...' });
-        setTimeout(() => {
-          onLoginSuccess(data.access_token, data.user);
-        }, 1500);
+        setIsModalActive(false);
+        setLoginStatus({ text: '', type: '' });
+        onLoginSuccess(data.access_token, data.user);
       } else {
-        const message = data.message || 'Login failed. Check credentials.';
+        const rawMsg = data.message;
+        const message = Array.isArray(rawMsg) ? rawMsg.join(', ') : (rawMsg || 'Login failed. Check credentials.');
         if (res.status === 403 || parseSuspensionReason(message)) {
           showSuspendedDialog(message);
         } else {
@@ -246,6 +289,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
 
   const handleRegister = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isRegistering) return;
+
     const name = regName.trim();
     const address = regAddress.trim();
     const email = regEmail.trim();
@@ -258,8 +303,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     if (name.length < 2) {
       return showStatus(setRegStatus, '❌ Name must be at least 2 characters', 'error');
     }
-    if (!validateGmail(email)) {
-      return showStatus(setRegStatus, '❌ Please enter a valid Gmail address', 'error');
+    const emailVal = validateEmailAuthenticity(email);
+    if (!emailVal.isValidFormat) {
+      return showStatus(setRegStatus, '❌ Please enter a valid email address', 'error');
+    }
+    if (emailVal.isDisposable) {
+      return showStatus(setRegStatus, '⚠️ Temporary/Disposable emails are blocked. Please use your genuine email.', 'error');
+    }
+    if (emailVal.badgeType === 'typo' && emailVal.suggestedFix) {
+      return showStatus(setRegStatus, `⚠️ Typo detected in email domain. Did you mean ${emailVal.suggestedFix}?`, 'error');
     }
     if (password.length < 6) {
       return showStatus(setRegStatus, '❌ Password must be at least 6 characters', 'error');
@@ -269,7 +321,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     }
 
     setIsRegistering(true);
-    setRegStatus({ text: 'Creating...', type: 'success' });
+    setRegStatus({ text: 'Creating account...', type: 'success' });
     try {
       const payload: any = { name, email, password };
       if (address) payload.address = address;
@@ -280,13 +332,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (res.ok && data.access_token) {
-        setSuccessDialogContent({ title: 'Account Created', message: 'Your account has been created successfully! Redirecting...' });
-        setTimeout(() => {
-          onLoginSuccess(data.access_token, data.user);
-        }, 1500);
+      if (res.ok) {
+        setLoginEmail(email);
+        setLoginPassword('');
+        setRegName('');
+        setRegEmail('');
+        setRegPassword('');
+        setRegConfirm('');
+        setRegAddress('');
+        setRegStatus({ text: '', type: '' });
+        setActiveTab('login');
+        showStatus(setLoginStatus, 'Account created successfully! Please log in.', 'success');
       } else {
-        showStatus(setRegStatus, data.message || 'Registration failed. Email might exist.', 'error');
+        const rawMsg = data.message;
+        const errMsg = Array.isArray(rawMsg) ? rawMsg.join(', ') : (rawMsg || 'Registration failed. Email might exist.');
+        showStatus(setRegStatus, `❌ ${errMsg}`, 'error');
       }
     } catch {
       showStatus(setRegStatus, '⚠️ Cannot connect to backend on port 3000', 'error');
@@ -443,6 +503,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   };
 
   const calculatePasswordStrength = (val: string) => {
+    if (!val) {
+      setPasswordStrength({ pct: '0%', color: 'transparent', text: '' });
+      return;
+    }
     let score = 0;
     if (val.length >= 8) score++;
     if (/[A-Z]/.test(val)) score++;
@@ -450,16 +514,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     if (/[^A-Za-z0-9]/.test(val)) score++;
 
     const levels = [
-      { pct: '0%', color: 'transparent', text: 'Password strength' },
       { pct: '25%', color: '#e74c3c', text: 'Weak' },
       { pct: '50%', color: '#f39c12', text: 'Fair' },
-      { pct: '75%', color: '#3498db', text: 'Good' },
-      { pct: '100%', color: '#2ecc71', text: 'Strong ✓' },
+      { pct: '75%', color: '#2563eb', text: 'Good' },
+      { pct: '100%', color: '#10b981', text: 'Strong ✓' },
     ];
-    setPasswordStrength(levels[score]);
+    const index = Math.min(score, levels.length - 1);
+    setPasswordStrength(levels[index]);
   };
 
   const calculateRegisterPasswordStrength = (val: string) => {
+    if (!val) {
+      setRegisterPasswordStrength({ pct: '0%', color: 'transparent', text: '' });
+      return;
+    }
     let score = 0;
     if (val.length >= 6) score++;
     if (/[A-Z]/.test(val)) score++;
@@ -467,13 +535,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     if (/[^A-Za-z0-9]/.test(val)) score++;
 
     const levels = [
-      { pct: '0%', color: 'transparent', text: 'Password strength' },
       { pct: '25%', color: '#e74c3c', text: 'Weak' },
       { pct: '50%', color: '#f39c12', text: 'Fair' },
-      { pct: '75%', color: '#3498db', text: 'Good' },
-      { pct: '100%', color: '#2ecc71', text: 'Strong ✓' },
+      { pct: '75%', color: '#2563eb', text: 'Good' },
+      { pct: '100%', color: '#10b981', text: 'Strong ✓' },
     ];
-    setRegisterPasswordStrength(levels[score]);
+    const index = Math.min(score, levels.length - 1);
+    setRegisterPasswordStrength(levels[index]);
   };
 
   const handleResetPassword = async () => {
@@ -505,14 +573,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const clearFields = () => {
     setLoginEmail('');
     setLoginPassword('');
+    setShowLoginPassword(false);
     setRegName('');
     setRegAddress('');
     setRegEmail('');
     setRegPassword('');
     setRegConfirm('');
+    setShowRegPassword(false);
+    setRegisterPasswordStrength({ pct: '0%', color: 'transparent', text: '' });
+    setPasswordStrength({ pct: '0%', color: 'transparent', text: '' });
     setResetEmail('');
     setNewPassword('');
     setConfirmPassword('');
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
     setOtpValues(['', '', '', '', '', '']);
     setResetStep(1);
     setLoginStatus({ text: '', type: '' });
@@ -532,36 +606,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
       case 1:
         return (
           <div className="reset-step active">
-            <p className="step-label">Enter your registered Gmail to receive a reset code</p>
+            <h2>Forgot Password?</h2>
+            <p className="form-sub-heading">Enter your email to receive a reset code</p>
             {resetEmailStatus.text && (
               <div className={`modal-status ${resetEmailStatus.type}`}>
                 {resetEmailStatus.text}
               </div>
             )}
-            <div className="floating-input-group">
+            <div className="form-group-field">
+              <label>Email Address</label>
               <input
                 type="email"
+                className="landing-input-field"
+                placeholder="Enter your email"
                 autoComplete="email"
-                placeholder=" "
                 value={resetEmail}
                 onChange={e => setResetEmail(e.target.value)}
                 onKeyPress={e => e.key === 'Enter' && handleSendOtp()}
               />
-              <label>Gmail address</label>
             </div>
             <button
               onClick={handleSendOtp}
               disabled={isSendingOtp}
               className="landing-submit-btn"
             >
-              {isSendingOtp ? <><span className="loading-spinner"></span> Sending...</> : 'Send Reset Code →'}
+              {isSendingOtp ? <><span className="loading-spinner"></span> Sending...</> : 'Send Reset Code'}
             </button>
+            <div className="modal-footer-text">
+              <span className="auth-switch-link" onClick={() => setActiveTab('login')}><i className="fas fa-arrow-left"></i> Back to login</span>
+            </div>
           </div>
         );
       case 2:
         return (
           <div className="reset-step active">
-            <p className="step-label">Code sent to {resetOtpSentEmail}</p>
+            <h2>Enter OTP Code</h2>
+            <p className="form-sub-heading">Code sent to {resetOtpSentEmail}</p>
             {resetOtpStatus.text && (
               <div className={`modal-status ${resetOtpStatus.type}`}>
                 {resetOtpStatus.text}
@@ -574,7 +654,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                   ref={el => {
                     otpInputRefs.current[idx] = el;
                   }}
-
                   className="otp-box"
                   maxLength={1}
                   inputMode="numeric"
@@ -600,32 +679,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
               disabled={isVerifyingOtp}
               className="landing-submit-btn"
             >
-              {isVerifyingOtp ? <><span className="loading-spinner"></span> Verifying...</> : 'Verify Code →'}
+              {isVerifyingOtp ? <><span className="loading-spinner"></span> Verifying...</> : 'Verify Code'}
             </button>
+            <div className="modal-footer-text">
+              <span className="auth-switch-link" onClick={() => setActiveTab('login')}><i className="fas fa-arrow-left"></i> Back to login</span>
+            </div>
           </div>
         );
       case 3:
         return (
           <div className="reset-step active">
-            <p className="step-label">Choose a strong new password</p>
+            <h2>Create New Password</h2>
+            <p className="form-sub-heading">Choose a strong new password</p>
             {resetPassStatus.text && (
               <div className={`modal-status ${resetPassStatus.type}`}>
                 {resetPassStatus.text}
               </div>
             )}
-            <div className="password-wrapper">
-              <div className="floating-input-group" style={{ margin: 0 }}>
+            <div className="form-group-field">
+              <label>New Password</label>
+              <div className="password-wrapper">
                 <input
                   type={showNewPassword ? 'text' : 'password'}
-                  placeholder=" "
+                  className="landing-input-field"
+                  placeholder="Enter new password (min 8 chars)"
                   value={newPassword}
                   onChange={e => {
                     setNewPassword(e.target.value);
                     calculatePasswordStrength(e.target.value);
                   }}
                 />
-                <label>New password (min 8 chars)</label>
-              </div>
                 <button
                   type="button"
                   className="eye-toggle"
@@ -633,49 +716,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                 >
                   {showNewPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
                 </button>
-            </div>
-            <div className="strength-bar">
-              <div
-                className="strength-fill"
+              </div>
+              <div className="strength-bar" style={{ marginTop: 6 }}>
+                <div
+                  className="strength-fill"
+                  style={{
+                    width: passwordStrength.pct,
+                    backgroundColor: passwordStrength.color,
+                  }}
+                />
+              </div>
+              <p
+                className="strength-label"
                 style={{
-                  width: passwordStrength.pct,
-                  backgroundColor: passwordStrength.color,
+                  color: passwordStrength.color !== 'transparent' ? passwordStrength.color : '#8e9ab0',
+                  marginTop: 4
                 }}
-              />
+              >
+                {passwordStrength.text}
+              </p>
             </div>
-            <p
-              className="strength-label"
-              style={{ color: passwordStrength.color !== 'transparent' ? passwordStrength.color : '#8e9ab0' }}
-            >
-              {passwordStrength.text}
-            </p>
-            <div className="password-wrapper">
-              <div className="floating-input-group" style={{ margin: 0 }}>
+
+            <div className="form-group-field">
+              <label>Confirm Password</label>
+              <div className="password-wrapper">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder=" "
+                  className="landing-input-field"
+                  placeholder="Confirm new password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   onKeyPress={e => e.key === 'Enter' && handleResetPassword()}
                 />
-                <label>Confirm new password</label>
+                <button
+                  type="button"
+                  className="eye-toggle"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                >
+                  {showConfirmPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
+                </button>
               </div>
-              <button
-                type="button"
-                className="eye-toggle"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-              >
-                {showConfirmPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
-              </button>
             </div>
+
             <button
               onClick={handleResetPassword}
               disabled={isResettingPassword}
               className="landing-submit-btn"
             >
-              {isResettingPassword ? <><span className="loading-spinner"></span> Resetting...</> : 'Reset Password →'}
+              {isResettingPassword ? <><span className="loading-spinner"></span> Resetting...</> : 'Reset Password'}
             </button>
+            <div className="modal-footer-text">
+              <span className="auth-switch-link" onClick={() => setActiveTab('login')}><i className="fas fa-arrow-left"></i> Back to login</span>
+            </div>
           </div>
         );
       case 4:
@@ -684,11 +777,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
             <div className="success-checkmark">
               <div className="checkmark-circle">✓</div>
               <h3>Password Reset!</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '8px 0 16px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: '8px 0 24px', lineHeight: '1.5' }}>
                 Your password has been updated successfully. You can now log in with your new credentials.
               </p>
               <button
-                className="back-to-login"
+                className="landing-submit-btn"
                 onClick={() => {
                   setActiveTab('login');
                   setResetStep(1);
@@ -718,57 +811,136 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
           <button className="gateway-btn" onClick={() => { setHasEntered(true); sessionStorage.setItem('findit_has_entered', 'true'); }}>
             Enter Experience
           </button>
-          {/* <div className="gateway-hint">Sound Off</div> */}
         </div>
       </div>
 
+      {/* HEADER NAVBAR */}
+      <header className="landing-header">
+        <div className="landing-logo">
+          <div className="logo-icon"><i className="fas fa-search"></i></div>
+          <span>FINDIT</span>
+        </div>
+        <nav className="landing-nav">
+          <a href="#home">Home</a>
+          <a href="#features">How It Works</a>
+          <a href="#categories">Categories</a>
+          <a href="#safety">Safety</a>
+          <a href="#about">About Us</a>
+        </nav>
+        <div className="landing-nav-actions">
+          <button className="nav-btn-login" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}>Log In</button>
+          <button className="nav-btn-signup" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('register'); }}>Sign Up</button>
+        </div>
+      </header>
+
       <div className="landing-content">
         {/* HERO SECTION */}
-        <div className="premium-hero">
-          <div className={`hero-badge-premium ${hasEntered ? 'hero-reveal delay-1' : 'hero-standby'}`}>
-            <span></span> AI-Powered Community Recovery
-          </div>
-          <h1 className={`premium-hero-title ${hasEntered ? 'hero-reveal delay-2' : 'hero-standby'}`}>
-            Never Lose What <br />
-            Matters Most.
-          </h1>
-          <p className={`premium-hero-subtitle ${hasEntered ? 'hero-reveal delay-3' : 'hero-standby'}`}>
-            Join thousands recovering lost items through our smart community platform. 
-            Real-time alerts, secure verification, and AI matching.
-          </p>
-          
-          <div className={`cta-group ${hasEntered ? 'hero-reveal delay-4' : 'hero-standby'}`}>
-            <button
-              className="premium-btn-primary"
-              onClick={() => {
-                clearFields();
-                setIsModalActive(true);
-                setActiveTab('login');
-              }}
-            >
-              Get Started 
-            </button>
-            <button className="premium-btn-secondary" onClick={handleLearnMore}>
-              Working Demo
-            </button>
+        <div className="premium-hero" id="home">
+          <div className="hero-left-content">
+            <div className={`hero-badge-premium ${hasEntered ? 'hero-reveal delay-1' : 'hero-standby'}`}>
+              <span></span> AI-Powered Community Recovery
+            </div>
+            <h1 className={`premium-hero-title ${hasEntered ? 'hero-reveal delay-2' : 'hero-standby'}`}>
+              Never Lose What <br />
+              <span className="premium-text-gradient">Matters Most.</span>
+            </h1>
+            <p className={`premium-hero-subtitle ${hasEntered ? 'hero-reveal delay-3' : 'hero-standby'}`}>
+              Join thousands recovering lost items through our smart community platform. 
+              Real-time alerts, secure verification, and AI matching.
+            </p>
+            
+            <div className={`cta-group ${hasEntered ? 'hero-reveal delay-4' : 'hero-standby'}`}>
+              <button
+                className="premium-btn-primary"
+                onClick={() => {
+                  clearFields();
+                  setIsModalActive(true);
+                  setActiveTab('register');
+                }}
+              >
+                Report Lost Item
+              </button>
+              <button className="premium-btn-secondary" onClick={handleLearnMore}>
+                Browse Found Items
+              </button>
+            </div>
+
+            <div className="hero-features-list">
+              <div className="hero-feature-item">
+                <div className="hero-feature-icon"><i className="fas fa-brain"></i></div>
+                <div className="hero-feature-text">
+                  <strong>AI Smart Matching</strong>
+                  <span>Advanced AI finds your items faster</span>
+                </div>
+              </div>
+              <div className="hero-feature-item">
+                <div className="hero-feature-icon"><i className="fas fa-bell"></i></div>
+                <div className="hero-feature-text">
+                  <strong>Real-time Alerts</strong>
+                  <span>Instant notifications when matches found</span>
+                </div>
+              </div>
+              <div className="hero-feature-item">
+                <div className="hero-feature-icon"><i className="fas fa-check-circle"></i></div>
+                <div className="hero-feature-text">
+                  <strong>Secure & Verified</strong>
+                  <span>Safe verification and secure claims</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-
+          <div className="hero-right-cards">
+            <div className="card-item backpack-card">
+              <img src={backpackImg} alt="Blue Backpack" />
+            </div>
+            <div className="card-item headphones-card">
+              <img src={headphonesImg} alt="Beige Headphones" />
+            </div>
+            <div className="card-item wallet-card">
+              <img src={walletImg} alt="Brown Wallet" />
+            </div>
+            <div className="match-card">
+              <div className="match-icon"><i className="fas fa-check-circle"></i></div>
+              <div className="match-info">
+                <strong>Match Found!</strong>
+                <span>Your lost backpack might have been found.</span>
+                <button className="match-btn" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}>View Details</button>
+              </div>
+            </div>
+            <div className="decor-dots"></div>
+          </div>
         </div>
 
         {/* STATISTICS ROW */}
-        <div className="premium-stats-row animate-on-scroll" ref={statsRef}>
-          <div className="premium-stat">
-            <div className="premium-stat-num">{countUsers}<span style={{ fontSize: '0.6em' }}>+</span></div>
-            <div className="premium-stat-label">Active Users</div>
-          </div>
-          <div className="premium-stat">
-            <div className="premium-stat-num">{countItems}<span style={{ fontSize: '0.6em' }}>+</span></div>
-            <div className="premium-stat-label">Items Recovered</div>
-          </div>
-          <div className="premium-stat">
-            <div className="premium-stat-num">{countRate}<span style={{ fontSize: '0.6em' }}>%</span></div>
-            <div className="premium-stat-label">Success Rate</div>
+        <div className="premium-stats-container animate-on-scroll" ref={statsRef}>
+          <div className="premium-stats-grid">
+            <div className="premium-stat-card">
+              <div className="premium-stat-icon">
+                <i className="fas fa-users" />
+              </div>
+              <div className="premium-stat-num">{countUsers}+</div>
+              <div className="premium-stat-label">Active Users</div>
+              <div className="premium-stat-sub">Verified community members</div>
+            </div>
+
+            <div className="premium-stat-card">
+              <div className="premium-stat-icon">
+                <i className="fas fa-box-open" />
+              </div>
+              <div className="premium-stat-num">{countItems}+</div>
+              <div className="premium-stat-label">Items Recovered</div>
+              <div className="premium-stat-sub">Reunited with rightful owners</div>
+            </div>
+
+            <div className="premium-stat-card">
+              <div className="premium-stat-icon">
+                <i className="fas fa-chart-line" />
+              </div>
+              <div className="premium-stat-num">{countRate}%</div>
+              <div className="premium-stat-label">Success Rate</div>
+              <div className="premium-stat-sub">AI-assisted recovery precision</div>
+            </div>
           </div>
         </div>
 
@@ -800,36 +972,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         </div>
 
         {/* CATEGORIES SECTION */}
-        <div className="premium-section animate-on-scroll" style={{ paddingTop: 0 }}>
-          <h2 className="premium-section-title" style={{ marginBottom: '3rem' }}>Commonly Recovered Items</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-            {[{ icon: '📱', name: 'Electronics', desc: 'Phones, laptops, earbuds' },
-              { icon: '💳', name: 'Documents', desc: 'IDs, passports, wallets' },
-              { icon: '🔑', name: 'Keys', desc: 'Car keys, house keys' },
-              { icon: '🎒', name: 'Bags', desc: 'Backpacks, luggage' },
-              { icon: '💍', name: 'Jewelry', desc: 'Rings, watches' }].map((cat, idx) => (
-              <div key={cat.name} className={`animate-on-scroll stagger-${(idx % 5) + 1}`} style={{ background: 'rgba(17, 24, 39, 0.4)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center', transition: 'all 0.3s ease', cursor: 'default' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)'; e.currentTarget.style.background = 'rgba(31, 41, 55, 0.6)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.background = 'rgba(17, 24, 39, 0.4)'; }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem', animation: 'floatBob 3s ease-in-out infinite', animationDelay: `${idx * 0.2}s` }}>{cat.icon}</div>
-                <h4 style={{ color: 'white', fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 600 }}>{cat.name}</h4>
-                <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>{cat.desc}</p>
+        <div className="premium-section animate-on-scroll" id="categories" style={{ paddingTop: 0 }}>
+          <h2 className="premium-section-title" style={{ marginBottom: '2.5rem' }}>Commonly Recovered Items</h2>
+          <div className="category-grid">
+            {[
+              { img: catElectronicsImg, name: 'Electronics', desc: 'Phones, laptops, earbuds' },
+              { img: catDocumentsImg, name: 'Documents', desc: 'IDs, passports, wallets' },
+              { img: catKeysImg, name: 'Keys', desc: 'Car keys, house keys' },
+              { img: catBagsImg, name: 'Bags', desc: 'Backpacks, luggage' },
+              { img: catJewelryImg, name: 'Jewelry', desc: 'Rings, watches' },
+            ].map((cat, idx) => (
+              <div key={cat.name} className={`category-card animate-on-scroll stagger-${(idx % 5) + 1}`}>
+                <div className="category-img-wrapper">
+                  <img src={cat.img} alt={cat.name} className="category-real-img" />
+                </div>
+                <h4>{cat.name}</h4>
+                <p>{cat.desc}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* SECURITY HIGHLIGHT */}
-        <div className="premium-section animate-on-scroll" style={{ paddingTop: 0 }}>
-          <div style={{ background: 'linear-gradient(145deg, rgba(30, 58, 138, 0.2) 0%, rgba(17, 24, 39, 0.5) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '24px', padding: '3rem 2rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-50%', left: '-20%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
-            <h2 style={{ color: 'white', fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Your Data is Secure With Us</h2>
-            <p style={{ color: '#9ca3af', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6', fontSize: '1.05rem' }}>
+        <div className="premium-section animate-on-scroll" id="safety" style={{ paddingTop: 0 }}>
+          <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)', border: '1px solid #dbeafe', borderRadius: '24px', padding: '3rem 2rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '-50%', left: '-20%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
+            <h2 style={{ color: '#1e3a8a', fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Your Data is Secure With Us</h2>
+            <p style={{ color: 'var(--text-muted)', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6', fontSize: '1.05rem' }}>
               We prioritize your privacy and safety. All personal information is encrypted. Our smart matching algorithm ensures you only interact with verified individuals, and your contact details are never shared without your explicit consent. Focus on finding your items, we'll handle the security.
             </p>
           </div>
         </div>
 
         {/* TESTIMONIALS SECTION */}
-        <div className="premium-section animate-on-scroll">
+        <div className="premium-section animate-on-scroll" id="about">
           <h2 className="premium-section-title">Community Trust</h2>
           <div className="testimonial-carousel">
             <div className="testimonial-card">
@@ -838,13 +1014,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                 <p className="testimonial-text">"{testimonials[currentTestimonial].text}"</p>
                 {(testimonials[currentTestimonial] as any).adminResponse && (
                   <div style={{
-                    background: 'rgba(59,130,246,0.1)',
-                    border: '1px solid rgba(59,130,246,0.2)',
+                    background: 'rgba(37,99,235,0.06)',
+                    border: '1px solid rgba(37,99,235,0.15)',
                     borderRadius: '8px',
                     padding: '10px 14px',
                     marginTop: '12px',
                     fontSize: '0.82rem',
-                    color: '#93c5fd',
+                    color: '#1d4ed8',
                   }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 700, marginBottom: '4px' }}>
                       ADMIN RESPONSE
@@ -871,32 +1047,91 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         </div>
 
         {/* FOOTER */}
-        <footer className="landing-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'transparent' }}>
-          <div className="footer-content">
-            <div className="footer-logo" style={{ background: 'linear-gradient(135deg, #60a5fa, #a855f7)', WebkitBackgroundClip: 'text', color: 'transparent', fontFamily: "'Syne', sans-serif", fontSize: '2rem', fontWeight: 800 }}>FINDIT</div>
-            <div className="footer-text">Join the community recovering what matters most.</div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', margin: '2rem 0' }}>
-              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="premium-social-icon" aria-label="Facebook">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              </a>
-              <a href="https://twitter.com" target="_blank" rel="noreferrer" className="premium-social-icon" aria-label="Twitter">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="premium-social-icon" aria-label="Instagram">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-              </a>
-              <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="premium-social-icon" aria-label="LinkedIn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-              </a>
+        <footer className="landing-footer">
+          <div className="footer-container">
+            <div className="footer-top-grid">
+              {/* Brand Info Column */}
+              <div className="footer-brand-col">
+                <div className="footer-brand">
+                  <div className="footer-logo-mark">
+                    <i className="fas fa-search-location"></i>
+                  </div>
+                  <span className="footer-logo-text">FIND<span>IT</span></span>
+                </div>
+                <p className="footer-brand-desc">
+                  Reconnecting people with what matters most through AI-driven matching and secure community reporting.
+                </p>
+                <div className="footer-socials">
+                  <a href="https://facebook.com" target="_blank" rel="noreferrer" className="social-pill" aria-label="Facebook">
+                    <i className="fab fa-facebook-f"></i>
+                  </a>
+                  <a href="https://twitter.com" target="_blank" rel="noreferrer" className="social-pill" aria-label="Twitter">
+                    <i className="fab fa-twitter"></i>
+                  </a>
+                  <a href="https://instagram.com" target="_blank" rel="noreferrer" className="social-pill" aria-label="Instagram">
+                    <i className="fab fa-instagram"></i>
+                  </a>
+                  <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="social-pill" aria-label="LinkedIn">
+                    <i className="fab fa-linkedin-in"></i>
+                  </a>
+                </div>
+              </div>
+
+              {/* Column 1: Platform */}
+              <div className="footer-col">
+                <h4>Platform</h4>
+                <ul>
+                  <li><a href="#features">How It Works</a></li>
+                  <li><a href="#features">AI Matching</a></li>
+                  <li><a href="#categories">Recovered Items</a></li>
+                  <li><a href="#about">Community Trust</a></li>
+                </ul>
+              </div>
+
+              {/* Column 2: Categories */}
+              <div className="footer-col">
+                <h4>Categories</h4>
+                <ul>
+                  <li><a href="#categories">Electronics</a></li>
+                  <li><a href="#categories">Documents & IDs</a></li>
+                  <li><a href="#categories">Keys & Fobs</a></li>
+                  <li><a href="#categories">Bags & Luggage</a></li>
+                  <li><a href="#categories">Jewelry & Watches</a></li>
+                </ul>
+              </div>
+
+              {/* Column 3: Legal & Help */}
+              <div className="footer-col">
+                <h4>Legal & Help</h4>
+                <ul>
+                  <li>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Privacy Policy', body: 'We value your privacy. All your data is encrypted and secure. We will never sell or misuse your personal information. Your identity is kept anonymous until you choose to reveal it during item verification.'}); }}>
+                      Privacy Policy
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Terms of Service', body: 'By using Findit, you agree to treat other community members with respect. You may only claim items that legitimately belong to you. Fraudulent claims will result in immediate permanent account suspension.'}); }}>
+                      Terms of Service
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Contact Us', body: 'Need help? You can reach our support team 24/7 at support@findit.gmail.com. We typically respond within 2-4 hours.'}); }}>
+                      Contact Us
+                    </a>
+                  </li>
+                </ul>
+              </div>
             </div>
 
-            <div className="footer-links">
-              <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Privacy Policy', body: 'We value your privacy. All your data is encrypted and secure. We will never sell or misuse your personal information. Your identity is kept anonymous until you choose to reveal it during item verification.'}); }}>Privacy Policy</a>
-              <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Terms of Service', body: 'By using Findit, you agree to treat other community members with respect. You may only claim items that legitimately belong to you. Fraudulent claims will result in immediate permanent account suspension.'}); }}>Terms of Service</a>
-              <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Contact Us', body: 'Need help? You can reach our support team 24/7 at support@findit.gmail.com. We typically respond within 2-4 hours.'}); }}>Contact Us</a>
+            <div className="footer-bottom-bar">
+              <div className="footer-copyright">
+                © {new Date().getFullYear()} FindIT Technologies Inc. All rights reserved.
+              </div>
+              <div className="footer-badges">
+                <span>🔒 256-bit Encrypted</span>
+                <span>⚡ Instant AI Match</span>
+              </div>
             </div>
-            <div className="footer-copyright">© 2026 FindIT. All rights reserved.</div>
           </div>
         </footer>
       </div>
@@ -907,234 +1142,426 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
           <span className="landing-modal-close" onClick={() => setIsModalActive(false)}>
             &times;
           </span>
-          <h2>Welcome to Findit</h2>
-          
-          <div className="landing-modal-tabs">
-            <button
-              className={`landing-modal-tab ${activeTab === 'login' ? 'active' : ''}`}
-              onClick={() => setActiveTab('login')}
-            >
-              🗝️ Login
-            </button>
-            <button
-              className={`landing-modal-tab ${activeTab === 'register' ? 'active' : ''}`}
-              onClick={() => setActiveTab('register')}
-            >
-              📝 Register
-            </button>
-            <button
-              className={`landing-modal-tab ${activeTab === 'reset' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('reset');
-                setResetStep(1);
-              }}
-            >
-              🔄 Reset
-            </button>
-          </div>
 
-          {/* LOGIN */}
-          <div className={`landing-modal-form ${activeTab === 'login' ? 'active' : ''}`}>
-            {loginStatus.text && (
-              <div className={`modal-status ${loginStatus.type}`}>
-                {loginStatus.text}
-              </div>
-            )}
-            <form onSubmit={handleLogin}>
-              <input
-                type="email"
-                className="landing-input-field"
-                placeholder="Gmail address"
-                autoComplete="email"
-                value={loginEmail}
-                onChange={e => setLoginEmail(e.target.value)}
-              />
-              <div className="password-wrapper">
-                <div className="floating-input-group" style={{ margin: 0 }}>
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    className="landing-input-field"
-                    placeholder="Password (min 6 chars)"
-                    value={loginPassword}
-                    onChange={e => setLoginPassword(e.target.value)}
-                  />
+          {/* LEFT SPLIT PANE */}
+          <div className="landing-modal-left">
+            {activeTab === 'login' && (
+              <>
+                <div className="modal-pane-icon">
+                  <i className="fas fa-shield-alt"></i>
                 </div>
-              <button
-                type="button"
-                className="eye-toggle"
-                onClick={() => setShowLoginPassword(!showLoginPassword)}
-                aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
-              >
-                {showLoginPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
-              </button>
-              </div>
-              <button
-                type="button"
-                className="landing-forgot-link"
-                onClick={() => {
-                  setActiveTab('reset');
-                  setResetStep(1);
-                }}
-              >
-                Forgot Password?
-              </button>
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="landing-submit-btn"
-              >
-                {isLoggingIn ? 'Logging in...' : 'Login →'}
-              </button>
-            </form>
-            <hr className="landing-hr" />
-            <button
-              type="button"
-              className="landing-google-btn"
-              onClick={initiateGoogleLogin}
-              disabled={googleLoading}
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>{' '}
-              {googleLoading ? 'Redirecting to Google…' : 'Continue with Google'}
-            </button>
+                <h3>Secure Login</h3>
+                <p>Your security is our priority. We keep your data safe and protected.</p>
+              </>
+            )}
+            {activeTab === 'register' && (
+              <>
+                <div className="modal-pane-icon">
+                  <i className="fas fa-user-friends"></i>
+                </div>
+                <h3>Create Account</h3>
+                <p>Join our helpful community to start tracking and recovering lost items.</p>
+              </>
+            )}
+            {activeTab === 'reset' && (
+              <>
+                <div className="modal-pane-icon">
+                  <i className="fas fa-lock"></i>
+                </div>
+                <h3>{resetStep === 3 ? 'Create New Password' : 'Reset Password'}</h3>
+                <p>{resetStep === 3 ? 'Choose a strong password to keep your account secure.' : 'No worries! Enter your email and we\'ll send you a link to reset your password.'}</p>
+              </>
+            )}
           </div>
 
-          {/* REGISTER */}
-          <div className={`landing-modal-form ${activeTab === 'register' ? 'active' : ''}`}>
-            {regStatus.text && (
-              <div className={`modal-status ${regStatus.type}`}>
-                {regStatus.text}
-              </div>
-            )}
-            <form onSubmit={handleRegister}>
-              <input
-                type="text"
-                className="landing-input-field"
-                placeholder="Full Name"
-                value={regName}
-                onChange={e => setRegName(e.target.value)}
-              />
-              <input
-                type="text"
-                className="landing-input-field"
-                placeholder="Address (optional)"
-                value={regAddress}
-                onChange={e => setRegAddress(e.target.value)}
-              />
-              <input
-                type="email"
-                className="landing-input-field"
-                placeholder="Gmail address"
-                value={regEmail}
-                onChange={e => setRegEmail(e.target.value)}
-              />
-              <div className="password-wrapper">
-                <div className="floating-input-group" style={{ margin: 0 }}>
+          {/* RIGHT SPLIT PANE */}
+          <div className="landing-modal-right">
+            {/* LOGIN TAB */}
+            <div className={`landing-modal-form ${activeTab === 'login' ? 'active' : ''}`}>
+              <h2>Welcome Back</h2>
+              <p className="form-sub-heading">Sign in to continue to your account</p>
+              {loginStatus.text && (
+                <div className={`modal-status ${loginStatus.type}`}>
+                  {loginStatus.text}
+                </div>
+              )}
+              <form onSubmit={handleLogin}>
+                <div className="form-group-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label>Email Address</label>
+                    {loginEmail && (() => {
+                      const val = validateEmailAuthenticity(loginEmail);
+                      if (val.badgeType === 'genuine') {
+                        return <span style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: 600, background: '#dcfce7', padding: '2px 8px', borderRadius: '6px', border: '1px solid #86efac' }}>✓ {val.providerLabel}</span>;
+                      }
+                      if (val.badgeType === 'edu') {
+                        return <span style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 600, background: '#dbeafe', padding: '2px 8px', borderRadius: '6px', border: '1px solid #93c5fd' }}>🎓 {val.providerLabel}</span>;
+                      }
+                      return null;
+                    })()}
+                  </div>
                   <input
-                    type={showLoginPassword ? 'text' : 'password'}
+                    type="email"
                     className="landing-input-field"
-                    placeholder="Password (min 6)"
-                    value={regPassword}
-                    onChange={e => {
-                      setRegPassword(e.target.value);
-                      calculateRegisterPasswordStrength(e.target.value);
-                    }}
+                    placeholder="Enter your email"
+                    autoComplete="email"
+                    value={loginEmail}
+                    onChange={e => setLoginEmail(e.target.value)}
                   />
+                  {loginEmail && (() => {
+                    const val = validateEmailAuthenticity(loginEmail);
+                    if (val.badgeType === 'typo' && val.suggestedFix) {
+                      return (
+                        <div style={{ marginTop: '6px', padding: '8px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '0.8rem', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>Did you mean <strong>{val.suggestedFix}</strong>?</span>
+                          <button
+                            type="button"
+                            onClick={() => setLoginEmail(val.suggestedFix!)}
+                            style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '6px', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Fix Email
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+                <div className="form-group-field">
+                  <label>Password</label>
+                  <div className="password-wrapper">
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      className="landing-input-field"
+                      placeholder="Enter your password"
+                      value={loginPassword}
+                      onChange={e => setLoginPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="eye-toggle"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showLoginPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
+                    </button>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  className="eye-toggle"
-                  onClick={() => setShowLoginPassword(!showLoginPassword)}
-                  aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showLoginPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
-                </button>
-              </div>
-
-              <div className="strength-bar" style={{ marginTop: 10 }}>
-                <div
-                  className="strength-fill"
-                  style={{
-                    width: registerPasswordStrength.pct,
-                    backgroundColor: registerPasswordStrength.color,
+                  className="landing-forgot-link"
+                  onClick={() => {
+                    setActiveTab('reset');
+                    setResetStep(1);
                   }}
-                />
-              </div>
-              <p
-                className="strength-label"
-                style={{
-                  color: registerPasswordStrength.color !== 'transparent' ? registerPasswordStrength.color : '#8e9ab0',
-                  marginTop: 6,
-                }}
-              >
-                {registerPasswordStrength.text}
-              </p>
+                >
+                  Forgot password?
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="landing-submit-btn"
+                >
+                  {isLoggingIn ? 'Logging in...' : 'Log In'}
+                </button>
+              </form>
 
-              <div className="password-wrapper">
-                <div className="floating-input-group" style={{ margin: 0 }}>
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    className="landing-input-field"
-                    placeholder="Confirm password"
-                    value={regConfirm}
-                    onChange={e => setRegConfirm(e.target.value)}
-                  />
-                </div>
+              <div className="divider-row"><span>Or sign in with Magic Email Link</span></div>
+
               <button
                 type="button"
-                className="eye-toggle"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                onClick={handleSendMagicLink}
+                disabled={isSendingMagicLink || !loginEmail}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1d4ed8',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: loginEmail ? 'pointer' : 'not-allowed',
+                  opacity: loginEmail ? 1 : 0.65,
+                  transition: 'all 0.2s',
+                  marginBottom: '14px',
+                }}
               >
-                {showConfirmPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
+                <i className="fas fa-envelope-open-text" style={{ fontSize: '1.05rem', color: '#2563eb' }}></i>
+                {isSendingMagicLink ? 'Sending Link to Email...' : '📧 Send Direct Login Link to Gmail'}
               </button>
-              </div>
 
+              {magicLinkResult && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '14px', marginBottom: '16px', fontSize: '0.85rem', color: '#166534' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fas fa-check-circle" style={{ color: '#22c55e', fontSize: '1.1rem' }}></i>
+                    Login Link Sent!
+                  </div>
+                  <p style={{ margin: '0 0 10px 0', lineHeight: 1.4 }}>
+                    We've sent a direct login link to <strong>{loginEmail}</strong>.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <a
+                      href="https://mail.google.com"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ background: '#ea4335', color: '#fff', padding: '7px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 700, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <i className="fab fa-google"></i> Open Gmail Inbox
+                    </a>
+                    {magicLinkResult.magicLink && (
+                      <a
+                        href={magicLinkResult.magicLink}
+                        style={{ background: '#2563eb', color: '#fff', padding: '7px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 700, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        🚀 1-Click Login Now
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="divider-row"><span>Or continue with</span></div>
               <button
-                type="submit"
-                disabled={isRegistering}
-                className="landing-submit-btn"
+                type="button"
+                className="landing-google-btn"
+                onClick={initiateGoogleLogin}
+                disabled={googleLoading}
               >
-                {isRegistering ? 'Creating...' : 'Create Account'}
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>{' '}
+                {googleLoading ? 'Redirecting...' : 'Google'}
               </button>
-            </form>
-            <hr className="landing-hr" />
-            <button
-              type="button"
-              className="landing-google-btn"
-              onClick={initiateGoogleLogin}
-              disabled={googleLoading}
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>{' '}
-              {googleLoading ? 'Redirecting to Google…' : 'Sign up with Google'}
-            </button>
-          </div>
-
-          {/* RESET PASSWORD */}
-          <div className={`landing-modal-form ${activeTab === 'reset' ? 'active' : ''}`}>
-            <div className="step-indicator">
-              <div className={`step-bubble ${resetStep >= 1 ? 'active' : ''} ${resetStep > 1 ? 'done' : ''}`}>
-                {resetStep > 1 ? '✓' : '1'}
-              </div>
-              <div className={`step-line ${resetStep > 1 ? 'done' : ''}`} />
-              <div className={`step-bubble ${resetStep >= 2 ? 'active' : ''} ${resetStep > 2 ? 'done' : ''}`}>
-                {resetStep > 2 ? '✓' : '2'}
-              </div>
-              <div className={`step-line ${resetStep > 2 ? 'done' : ''}`} />
-              <div className={`step-bubble ${resetStep >= 3 ? 'active' : ''} ${resetStep > 3 ? 'done' : ''}`}>
-                {resetStep > 3 ? '✓' : '3'}
+              <div className="modal-footer-text">
+                Don't have an account? <span className="auth-switch-link" onClick={() => setActiveTab('register')}>Sign up</span>
               </div>
             </div>
-            {renderResetStep()}
+
+            {/* REGISTER TAB */}
+            <div className={`landing-modal-form ${activeTab === 'register' ? 'active' : ''}`}>
+              <h2>Create Account</h2>
+              <p className="form-sub-heading">Sign up to get started</p>
+              {regStatus.text && (
+                <div className={`modal-status ${regStatus.type}`}>
+                  {regStatus.text}
+                </div>
+              )}
+              <form onSubmit={handleRegister}>
+                <div className="form-group-field">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    className="landing-input-field"
+                    placeholder="Enter your full name"
+                    value={regName}
+                    onChange={e => setRegName(e.target.value)}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label>Email Address</label>
+                    {regEmail && (() => {
+                      const val = validateEmailAuthenticity(regEmail);
+                      if (val.badgeType === 'genuine') {
+                        return <span style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: 600, background: '#dcfce7', padding: '2px 8px', borderRadius: '6px', border: '1px solid #86efac' }}>✓ {val.providerLabel}</span>;
+                      }
+                      if (val.badgeType === 'edu') {
+                        return <span style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 600, background: '#dbeafe', padding: '2px 8px', borderRadius: '6px', border: '1px solid #93c5fd' }}>🎓 {val.providerLabel}</span>;
+                      }
+                      if (val.badgeType === 'disposable') {
+                        return <span style={{ fontSize: '0.75rem', color: '#b91c1c', fontWeight: 600, background: '#fee2e2', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fca5a5' }}>⚠️ Disposable Email Blocked</span>;
+                      }
+                      if (val.badgeType === 'typo') {
+                        return <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600, background: '#fef3c7', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>⚠️ Domain Typo</span>;
+                      }
+                      return null;
+                    })()}
+                  </div>
+                  <input
+                    type="email"
+                    className="landing-input-field"
+                    placeholder="Enter your email (e.g. user@gmail.com)"
+                    value={regEmail}
+                    onChange={e => setRegEmail(e.target.value)}
+                  />
+
+                  {/* TYPO FIX & DISPOSABLE WARNING BANNER */}
+                  {regEmail && (() => {
+                    const val = validateEmailAuthenticity(regEmail);
+                    if (val.badgeType === 'typo' && val.suggestedFix) {
+                      return (
+                        <div style={{ marginTop: '6px', padding: '8px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '0.8rem', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>Did you mean <strong>{val.suggestedFix}</strong>?</span>
+                          <button
+                            type="button"
+                            onClick={() => setRegEmail(val.suggestedFix!)}
+                            style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '6px', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Fix Email
+                          </button>
+                        </div>
+                      );
+                    }
+                    if (val.badgeType === 'disposable') {
+                      return (
+                        <div style={{ marginTop: '6px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.8rem', color: '#991b1b' }}>
+                          ⚠️ Temporary/disposable email domains are blocked to prevent fraud. Please use your genuine email address.
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {/* DOMAIN QUICK-FILL SUGGESTIONS */}
+                  {regEmail.includes('@') && !regEmail.split('@')[1]?.includes('.') && (() => {
+                    const suggestions = getEmailDomainSuggestions(regEmail);
+                    if (suggestions.length > 0) {
+                      return (
+                        <div style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-soft)' }}>Quick suggestions:</span>
+                          {suggestions.map((sug, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setRegEmail(sug)}
+                              style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              {sug}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+                <div className="form-group-field">
+                  <label>Password</label>
+                  <div className="password-wrapper">
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      className="landing-input-field"
+                      placeholder="Create a password"
+                      value={regPassword}
+                      onChange={e => {
+                        setRegPassword(e.target.value);
+                        calculateRegisterPasswordStrength(e.target.value);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="eye-toggle"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      aria-label={showRegPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showRegPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
+                    </button>
+                  </div>
+                  <div className="strength-bar">
+                    <div
+                      className="strength-fill"
+                      style={{
+                        width: registerPasswordStrength.pct,
+                        backgroundColor: registerPasswordStrength.color,
+                      }}
+                    />
+                  </div>
+                  <p
+                    className="strength-label"
+                    style={{
+                      color: registerPasswordStrength.color !== 'transparent' ? registerPasswordStrength.color : '#8e9ab0',
+                      marginTop: 4,
+                    }}
+                  >
+                    {registerPasswordStrength.text}
+                  </p>
+                </div>
+
+                <div className="form-group-field">
+                  <label>Confirm Password</label>
+                  <div className="password-wrapper">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      className="landing-input-field"
+                      placeholder="Confirm your password"
+                      value={regConfirm}
+                      onChange={e => setRegConfirm(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="eye-toggle"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    >
+                      {showConfirmPassword ? <i className="fas fa-eye-slash" aria-hidden /> : <i className="fas fa-eye" aria-hidden />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-group-field">
+                  <label>Address (optional)</label>
+                  <input
+                    type="text"
+                    className="landing-input-field"
+                    placeholder="Enter your address"
+                    value={regAddress}
+                    onChange={e => setRegAddress(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  onClick={handleRegister}
+                  disabled={isRegistering}
+                  className="landing-submit-btn"
+                >
+                  {isRegistering ? 'Creating...' : 'Sign Up'}
+                </button>
+              </form>
+              <div className="divider-row"><span>Or continue with</span></div>
+              <button
+                type="button"
+                className="landing-google-btn"
+                onClick={initiateGoogleLogin}
+                disabled={googleLoading}
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>{' '}
+                {googleLoading ? 'Redirecting...' : 'Google'}
+              </button>
+              <div className="modal-footer-text">
+                Already have an account? <span className="auth-switch-link" onClick={() => setActiveTab('login')}>Log in</span>
+              </div>
+            </div>
+
+            {/* RESET PASSWORD TAB */}
+            <div className={`landing-modal-form ${activeTab === 'reset' ? 'active' : ''}`}>
+              <div className="step-indicator" style={{ display: 'none' }}>
+                <div className={`step-bubble ${resetStep >= 1 ? 'active' : ''} ${resetStep > 1 ? 'done' : ''}`}>
+                  {resetStep > 1 ? '✓' : '1'}
+                </div>
+                <div className={`step-line ${resetStep > 1 ? 'done' : ''}`} />
+                <div className={`step-bubble ${resetStep >= 2 ? 'active' : ''} ${resetStep > 2 ? 'done' : ''}`}>
+                  {resetStep > 2 ? '✓' : '2'}
+                </div>
+                <div className={`step-line ${resetStep > 2 ? 'done' : ''}`} />
+                <div className={`step-bubble ${resetStep >= 3 ? 'active' : ''} ${resetStep > 3 ? 'done' : ''}`}>
+                  {resetStep > 3 ? '✓' : '3'}
+                </div>
+              </div>
+              {renderResetStep()}
+            </div>
           </div>
 
         </div>
@@ -1142,12 +1569,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
 
       {/* INFO MODAL */}
       <div className={`landing-modal ${infoModalContent ? 'active' : ''}`} onClick={() => setInfoModalContent(null)}>
-        <div className="landing-modal-container" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px', textAlign: 'center', padding: '2.5rem' }}>
+        <div className="landing-modal-container" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px', textAlign: 'center', padding: '2.5rem', display: 'block', height: 'auto' }}>
           <span className="landing-modal-close" onClick={() => setInfoModalContent(null)}>
             &times;
           </span>
-          <h2 style={{ marginBottom: '1.5rem', color: 'white', fontSize: '1.5rem' }}>{infoModalContent?.title}</h2>
-          <p style={{ color: '#9ca3af', lineHeight: '1.6', fontSize: '1rem', marginBottom: '2rem' }}>
+          <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-main)', fontSize: '1.5rem', display: 'block' }}>{infoModalContent?.title}</h2>
+          <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', fontSize: '1rem', marginBottom: '2rem' }}>
             {infoModalContent?.body}
           </p>
           <button 
@@ -1162,12 +1589,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
 
       {/* SUCCESS MODAL */}
       <div className={`landing-modal ${successDialogContent ? 'active' : ''}`} style={{ zIndex: 10000 }}>
-        <div className="landing-modal-container" style={{ maxWidth: '400px', textAlign: 'center', padding: '2.5rem' }}>
+        <div className="landing-modal-container" style={{ maxWidth: '400px', textAlign: 'center', padding: '2.5rem', display: 'block', height: 'auto' }}>
           <div style={{ fontSize: '3rem', color: 'var(--found)', marginBottom: '1rem' }}>
             <i className="fas fa-check-circle"></i>
           </div>
-          <h2 style={{ marginBottom: '1rem', color: 'white', fontSize: '1.5rem' }}>{successDialogContent?.title}</h2>
-          <p style={{ color: '#9ca3af', lineHeight: '1.6', fontSize: '1rem', marginBottom: '2rem' }}>
+          <h2 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.5rem', display: 'block' }}>{successDialogContent?.title}</h2>
+          <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', fontSize: '1rem', marginBottom: '2rem' }}>
             {successDialogContent?.message}
           </p>
           <button 

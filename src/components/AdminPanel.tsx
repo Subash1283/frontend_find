@@ -758,16 +758,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
 
                   <div className="admin-item-body">
-                    {item.image ? (
-                      <div className="admin-item-image">
+                    {item.imageFront || item.image ? (
+                      <div className="admin-item-image" style={{ position: 'relative', overflow: 'hidden' }}>
                         <img
-                          src={`${apiBase}/uploads/items/${item.image}`}
+                          src={`${apiBase}/uploads/items/${item.imageFront || item.image}`}
                           alt={item.title || 'Item'}
+                          style={{
+                            filter: (item.sensitive && item.sensitiveBlur) ? 'blur(20px) brightness(0.6)' : 'none',
+                            transition: 'filter 0.3s ease',
+                          }}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                             e.currentTarget.nextElementSibling?.classList.remove('hidden');
                           }}
                         />
+                        {item.sensitive && item.sensitiveBlur && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              background: 'rgba(0,0,0,0.5)',
+                              color: 'white',
+                              padding: '8px',
+                              zIndex: 2,
+                            }}
+                          >
+                            <i className="fas fa-eye-slash" style={{ fontSize: '1.2rem' }} />
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              Sensitive Content
+                            </span>
+                          </div>
+                        )}
                         <div className="admin-item-icon hidden">
                           {item.type === 'lost' ? '🔍' : '✅'}
                         </div>

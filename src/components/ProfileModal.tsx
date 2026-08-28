@@ -25,10 +25,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
-  // Password fields
+  // Password fields & visibility toggles
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Identity Verification fields
@@ -36,11 +39,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [docFiles, setDocFiles] = useState<File[] | null>(null);
   const [isUploadingDocs, setIsUploadingDocs] = useState(false);
 
-
-
-
   const vStatus = currentUser?.verificationStatus || (currentUser?.isVerified ? 'verified' : 'unverified');
-
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,12 +52,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ address: address.trim() }),
+        body: JSON.stringify({ address: address.trim(), phone: phone.trim() }),
       });
       if (res.ok) {
         const data = await res.json();
         onUserUpdated(data);
-        showToast('Profile updated successfully!', 'success');
+        showToast('Profile details updated successfully!', 'success');
       } else {
         const text = await res.text();
         showToast(text || 'Failed to update profile', 'error');
@@ -183,14 +182,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         // Check autoVerification result and show appropriate message
         if (data.autoVerification) {
           if (data.autoVerification.verified) {
-            showToast('🎉 Verification Successful! Your identity has been verified.', 'success');
+            showToast(' Verification Successful! Your identity has been verified.', 'success');
           } else if (data.autoVerification.rejected) {
-            showToast(`❌ Verification Failed. ${data.autoVerification.reason || 'Name mismatch detected.'}`, 'error');
+            const count = data.autoVerification.attemptsCount || 1;
+            const attemptsLeft = Math.max(0, 6 - count);
+            showToast(data.autoVerification.reason || ` Verification Failed (Attempt ${count}/6). You have ${attemptsLeft} retry attempt(s) left.`, 'error');
           } else {
-            showToast('Documents uploaded! Your verification is pending manual review.', 'info');
+            showToast(data.autoVerification.reason || 'Documents uploaded! Your verification has been submitted for manual admin review.', 'info');
           }
         } else {
-          showToast('Documents uploaded successfully! Processing auto-verification...', 'success');
+          showToast('Documents uploaded successfully! Processing verification...', 'success');
         }
         
         setDocFiles(null);
@@ -209,43 +210,53 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   const getStatusBadge = () => {
-    if (currentUser?.role === 'admin') return <span className="status-badge found-tag">ADMINISTRATOR 🛡️</span>;
-    if (vStatus === 'verified') return <span className="status-badge found-tag">VERIFIED ✓</span>;
-    if (vStatus === 'pending') return <span className="status-badge" style={{ background: 'var(--reward-bg)', color: 'var(--reward)', border: '1px solid rgba(245,158,11,0.2)' }}>PENDING REVIEW</span>;
-    return <span className="status-badge lost-tag">UNVERIFIED PROFILE</span>;
+    if (currentUser?.role === 'admin') return <span className="status-badge found-tag" style={{ background: '#dbeafe', color: '#1e40af', border: '1px solid #93c5fd' }}>ADMINISTRATOR 🛡️</span>;
+    if (vStatus === 'verified') return <span className="status-badge found-tag" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>VERIFIED ✓</span>;
+    if (vStatus === 'pending') return <span className="status-badge" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>PENDING REVIEW</span>;
+    return <span className="status-badge lost-tag" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>UNVERIFIED</span>;
   };
 
   return (
-    <div className="modal active" onClick={onClose}>
-      <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '620px' }}>
-        <div className="modal-title">
-          <h3>⚙️ Profile & Verification Control</h3>
-          <button className="modal-close" onClick={onClose}>
+    <div className="modal active" onClick={onClose} style={{ backdropFilter: 'blur(6px)' }}>
+      <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', padding: '28px', borderRadius: '20px' }}>
+        <div className="modal-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', paddingBottom: '14px', borderBottom: '1px solid var(--border-soft)' }}>
+          <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>⚙️</span> Profile & Verification Control
+          </h3>
+          <button 
+            type="button"
+            className="modal-close" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'var(--bg-secondary)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: 'var(--text-soft)' }}
+          >
             &times;
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* PROFILE INFO SECTION */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px' }}>
-              <h4 style={{ fontFamily: 'Syne', fontSize: '1rem', margin: 0 }}>
-                👤 Basic Details
+          <div style={{ background: 'var(--bg-secondary)', borderRadius: '14px', padding: '20px', border: '1px solid var(--border-soft)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fas fa-user-circle" style={{ color: '#2563eb' }}></i> Basic Details
               </h4>
             </div>
             <form onSubmit={handleUpdateProfile}>
-
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="profile-name">Full Name (Permanent)</label>
-                  <input id="profile-name" name="name" type="text" value={currentUser?.name || ''} disabled style={{ opacity: 0.65, cursor: 'not-allowed' }} />
+                  <input id="profile-name" name="name" type="text" value={currentUser?.name || ''} disabled style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-primary)' }} />
                 </div>
                 <div className="form-group">
                   <label htmlFor="profile-email">Email (Account ID)</label>
-                  <input id="profile-email" name="email" type="email" value={currentUser?.email || ''} disabled style={{ opacity: 0.65, cursor: 'not-allowed' }} />
+                  <input id="profile-email" name="email" type="email" value={currentUser?.email || ''} disabled style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-primary)' }} />
                 </div>
               </div>
-              <div className="form-row">
+              <div className="form-row" style={{ marginTop: '12px' }}>
                 <div className="form-group">
                   <label htmlFor="profile-address">Home Address</label>
                   <input id="profile-address" name="address" type="text" placeholder="e.g. Lalitpur, Nepal" value={address} onChange={e => setAddress(e.target.value)} />
@@ -256,62 +267,134 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
               </div>
 
-              <button type="submit" disabled={isUpdatingProfile} className="btn-primary" style={{ padding: '8px 20px', fontSize: '0.8rem' }}>
-                {isUpdatingProfile ? 'Saving...' : 'Save Profile Details'}
-              </button>
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="submit" disabled={isUpdatingProfile} className="btn-primary" style={{ padding: '9px 24px', fontSize: '0.88rem', borderRadius: '10px', fontWeight: 700 }}>
+                  {isUpdatingProfile ? 'Saving...' : 'Save Profile Details'}
+                </button>
+              </div>
             </form>
           </div>
 
           {/* CHANGE PASSWORD */}
-          <div>
-            <h4 style={{ fontFamily: 'Syne', marginBottom: '12px', fontSize: '1rem', borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px' }}>
-              🔑 Change Account Password
+          <div style={{ background: 'var(--bg-secondary)', borderRadius: '14px', padding: '20px', border: '1px solid var(--border-soft)' }}>
+            <h4 style={{ marginBottom: '16px', fontSize: '1rem', fontWeight: 700, margin: '0 0 16px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fas fa-key" style={{ color: '#059669' }}></i> Change Account Password
             </h4>
             <form onSubmit={handleChangePassword}>
               <div className="form-row">
-                <div className="form-group">
+                <div className="form-group" style={{ position: 'relative' }}>
                   <label htmlFor="profile-current-password">Current Password</label>
-                  <input id="profile-current-password" name="currentPassword" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      id="profile-current-password" 
+                      name="currentPassword" 
+                      type={showCurrentPass ? 'text' : 'password'} 
+                      value={currentPassword} 
+                      onChange={e => setCurrentPassword(e.target.value)} 
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPass(!showCurrentPass)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '0.9rem' }}
+                    >
+                      <i className={showCurrentPass ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="form-row" style={{ marginTop: '12px' }}>
+                <div className="form-group" style={{ position: 'relative' }}>
                   <label htmlFor="profile-new-password">New Password (min 6 chars)</label>
-                  <input id="profile-new-password" name="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      id="profile-new-password" 
+                      name="newPassword" 
+                      type={showNewPass ? 'text' : 'password'} 
+                      value={newPassword} 
+                      onChange={e => setNewPassword(e.target.value)} 
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '0.9rem' }}
+                    >
+                      <i className={showNewPass ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                    </button>
+                  </div>
                 </div>
-                <div className="form-group">
+                <div className="form-group" style={{ position: 'relative' }}>
                   <label htmlFor="profile-confirm-password">Confirm Password</label>
-                  <input id="profile-confirm-password" name="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      id="profile-confirm-password" 
+                      name="confirmPassword" 
+                      type={showConfirmPass ? 'text' : 'password'} 
+                      value={confirmPassword} 
+                      onChange={e => setConfirmPassword(e.target.value)} 
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '0.9rem' }}
+                    >
+                      <i className={showConfirmPass ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <button type="submit" disabled={isChangingPassword} className="btn-primary" style={{ padding: '8px 20px', fontSize: '0.8rem' }}>
-                {isChangingPassword ? 'Updating...' : 'Update Password'}
-              </button>
+
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="submit" disabled={isChangingPassword} className="btn-primary" style={{ padding: '9px 24px', fontSize: '0.88rem', borderRadius: '10px', fontWeight: 700 }}>
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
             </form>
           </div>
 
           {/* IDENTITY VERIFICATION */}
           {currentUser?.role !== 'admin' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px' }}>
-                <h4 style={{ fontFamily: 'Syne', fontSize: '1rem', margin: 0 }}>
-                  🪪 Identity Verification
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: '14px', padding: '20px', border: '1px solid var(--border-soft)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fas fa-id-card" style={{ color: '#8b5cf6' }}></i> Identity Verification
                 </h4>
                 {getStatusBadge()}
               </div>
 
               {vStatus === 'verified' ? (
-                <div style={{ background: 'var(--found-bg)', color: 'var(--found)', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid rgba(16,185,129,0.3)' }}>
-                   Your account has been verified. You now have full access to publish posts and make claims on Findit.
+                <div style={{ background: '#ecfdf5', color: '#065f46', padding: '14px 16px', borderRadius: '12px', fontSize: '0.88rem', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                   <i className="fas fa-check-circle" style={{ fontSize: '1.2rem', color: '#10b981' }}></i>
+                   <span>Your account has been verified. You now have full access to publish posts and make claims on Findit.</span>
                 </div>
               ) : vStatus === 'pending' ? (
-                <div style={{ background: 'var(--reward-bg)', color: '#b45309', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid rgba(245,158,11,0.3)' }}>
-                  ⏳ Your document has been uploaded and is under manual review by the administrator. Name matches are auto-processed.
+                <div style={{ background: '#fffbeb', color: '#92400e', padding: '14px 16px', borderRadius: '12px', fontSize: '0.88rem', border: '1px solid #fde68a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600 }}>
+                    <i className="fas fa-clock" style={{ fontSize: '1.2rem', color: '#f59e0b' }}></i>
+                    <span>Your document is under manual review by the administrator.</span>
+                  </div>
+                  {(currentUser?.verificationAttempts || 0) >= 6 ? (
+                    <span style={{ fontSize: '0.82rem', color: '#b45309' }}>
+                      ⚠️ Maximum auto-verification attempts (6/6) used. Auto-verification is locked, and your request is waiting for manual admin approval.
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.82rem', color: '#b45309' }}>
+                      Name matches are auto-processed. If unresolved, an administrator will review your documents manually.
+                    </span>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleUploadDocument}>
-                  <div style={{ background: '#fffbeb', border: '1px solid rgba(245,158,11,0.4)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem', color: '#b45309', marginBottom: '14px' }}>
-                    📢 To report or claim items, please verify your identity by uploading official documents. Name matching checks are auto-approved instantly.
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px 14px', borderRadius: '10px', fontSize: '0.85rem', color: '#1e40af', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <i className="fas fa-info-circle" style={{ fontSize: '1.1rem', color: '#3b82f6' }}></i>
+                      <span>To report or claim items, please verify your identity by uploading official documents.</span>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', background: '#dbeafe', color: '#1e40af', padding: '3px 8px', borderRadius: '6px', whiteSpace: 'nowrap', fontWeight: 700, border: '1px solid #93c5fd' }}>
+                      Attempt {currentUser?.verificationAttempts || 0}/6
+                    </span>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
@@ -324,7 +407,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       </select>
                     </div>
                   </div>
-                  <div className="form-row">
+                  <div className="form-row" style={{ marginTop: '12px' }}>
                     <div className="form-group">
                       <label htmlFor="profileDocInput">Upload Document Scans</label>
                       <input
@@ -335,23 +418,34 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         accept="image/*"
                         onChange={handleFileChange}
                       />
-                      <small style={{ color: 'var(--text-soft)', marginTop: '4px', display: 'block' }}>
+                      <small style={{ color: 'var(--text-soft)', marginTop: '6px', display: 'block' }}>
                         {(docType === 'passport' || docType === 'student_id')
                           ? 'Select exactly 1 image (front side).'
                           : 'Select exactly 2 images — Upload Front first, then Back.'}
                       </small>
+                      {docFiles && docFiles.length > 0 && (
+                        <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {docFiles.map((f, i) => (
+                            <span key={i} style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: '#e0e7ff', color: '#3730a3', fontWeight: 600 }}>
+                              📄 {f.name} ({Math.round(f.size / 1024)} KB)
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <button type="submit" disabled={isUploadingDocs} className="btn-primary" style={{ padding: '8px 20px', fontSize: '0.8rem' }}>
-                    {isUploadingDocs ? 'Uploading & Verifying...' : 'Submit Verification Docs'}
-                  </button>
+
+                  <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="submit" disabled={isUploadingDocs} className="btn-primary" style={{ padding: '9px 24px', fontSize: '0.88rem', borderRadius: '10px', fontWeight: 700 }}>
+                      {isUploadingDocs ? 'Uploading & Verifying...' : 'Submit Verification Docs'}
+                    </button>
+                  </div>
                 </form>
               )}
             </div>
           )}
         </div>
       </div>
-
     </div>
   );
 };

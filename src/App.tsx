@@ -22,6 +22,7 @@ function AppContent() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [globalSuccessDialog, setGlobalSuccessDialog] = useState<{title: string, message: string} | null>(null);
   const [globalSuspendedReason, setGlobalSuspendedReason] = useState<string | null>(null);
+  const [isLoggingInNav, setIsLoggingInNav] = useState(false);
   const authBootstrapped = useRef(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -123,15 +124,13 @@ function AppContent() {
         if (userData) {
           setCurrentUser(userData);
           if (oauthToken) {
-            // Google OAuth login: show success dialog then redirect
-            setGlobalSuccessDialog({
-              title: 'Welcome Back!',
-              message: 'Google login successful. Redirecting to your dashboard...'
-            });
+            // Google OAuth login: smooth 1.2s loading delay before dashboard navigation
+            setIsLoggingInNav(true);
             setTimeout(() => {
-              setGlobalSuccessDialog(null);
               navigate(DASHBOARD_PATHS.home, { replace: true });
-            }, 1500);
+              setIsLoggingInNav(false);
+              showToast(`Login successful! Welcome back, ${userData.name || 'User'}!`, 'success');
+            }, 1200);
           } else {
             const currentPath = window.location.pathname;
             if (currentPath === '/' || currentPath === '') {
@@ -159,13 +158,19 @@ function AppContent() {
 
   const handleLoginSuccess = (newToken: string, user: any) => {
     localStorage.setItem('token', newToken);
-    setToken(newToken);
-    setCurrentUser(user);
-    navigate(DASHBOARD_PATHS.home, { replace: true });
+    setIsLoggingInNav(true);
+    setTimeout(() => {
+      setToken(newToken);
+      setCurrentUser(user);
+      navigate(DASHBOARD_PATHS.home, { replace: true });
+      setIsLoggingInNav(false);
+      showToast(` Login successful! Welcome back, ${user?.name || 'User'}!`, 'success');
+    }, 1200);
   };
 
   const showGlobalLoader =
     isInitializing ||
+    isLoggingInNav ||
     (location.pathname === AUTH_CALLBACK_PATH && !token && !currentUser);
 
   if (showGlobalLoader) {
@@ -173,7 +178,9 @@ function AppContent() {
       <div className="app-boot-screen">
         <i className="fas fa-circle-notch fa-spin app-boot-spinner" aria-hidden />
         <h2>FINDIT</h2>
-        <p>{location.pathname === AUTH_CALLBACK_PATH ? 'Completing Google sign-in…' : 'Loading…'}</p>
+        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '6px' }}>
+          {isLoggingInNav ? 'Preparing your dashboard...' : location.pathname === AUTH_CALLBACK_PATH ? 'Completing Google sign-in…' : 'Loading…'}
+        </p>
       </div>
     );
   }
@@ -210,12 +217,12 @@ function AppContent() {
       {/* GLOBAL SUCCESS MODAL FOR OAUTH */}
       {globalSuccessDialog && (
         <div className="landing-modal active" style={{ zIndex: 10000 }}>
-          <div className="landing-modal-container" style={{ maxWidth: '400px', textAlign: 'center', padding: '2.5rem', background: '#111827', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="landing-modal-container" style={{ maxWidth: '400px', textAlign: 'center', padding: '2.5rem', background: 'var(--surface)', borderRadius: '16px', border: '1px solid var(--border)', display: 'block', height: 'auto' }}>
             <div style={{ fontSize: '3rem', color: 'var(--found)', marginBottom: '1rem' }}>
               <i className="fas fa-check-circle"></i>
             </div>
-            <h2 style={{ marginBottom: '1rem', color: 'white', fontSize: '1.5rem', fontFamily: 'var(--font-heading)' }}>{globalSuccessDialog.title}</h2>
-            <p style={{ color: '#9ca3af', lineHeight: '1.6', fontSize: '1rem', marginBottom: '2rem', fontFamily: 'var(--font-body)' }}>
+            <h2 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.5rem', fontFamily: 'var(--font-heading)', display: 'block' }}>{globalSuccessDialog.title}</h2>
+            <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', fontSize: '1rem', marginBottom: '2rem', fontFamily: 'var(--font-body)' }}>
               {globalSuccessDialog.message}
             </p>
             <button 

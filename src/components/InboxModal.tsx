@@ -26,21 +26,51 @@ export const InboxModal: React.FC<InboxModalProps> = ({
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, chatId: string | null, itemId: number | null, otherUserId: number | null }>({ show: false, chatId: null, itemId: null, otherUserId: null });
 
   useEffect(() => {
-    if (!socket) return;
+    const fetchInboxRest = async () => {
+      try {
+        const res = await fetch(`${apiBase}/chat/inbox`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setChats(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
+            return data;
+          });
+          setIsLoading(false);
+        }
+      } catch (e) {
+        console.warn('[InboxModal] REST fetch failed:', e);
+      }
+    };
+
+    fetchInboxRest();
 
     const handleInboxData = (inboxChats: any[]) => {
       setChats(inboxChats);
       setIsLoading(false);
     };
 
-    // Backend emits `inboxData` (see ChatGateway). Some older code listened to `inbox`.
-    socket.on('inboxData', handleInboxData);
-    socket.emit('getInbox');
+    if (socket) {
+      socket.on('inboxData', handleInboxData);
+      socket.emit('getInbox');
+    }
+
+    const pollInterval = setInterval(() => {
+      if (socket && socket.connected) {
+        socket.emit('getInbox');
+      } else {
+        fetchInboxRest();
+      }
+    }, 3500);
 
     return () => {
-      socket.off('inboxData', handleInboxData);
+      clearInterval(pollInterval);
+      if (socket) {
+        socket.off('inboxData', handleInboxData);
+      }
     };
-  }, [socket]);
+  }, [socket, apiBase, token]);
 
   // Filter threads
   const activeChatsList = chats.filter(
@@ -65,7 +95,16 @@ export const InboxModal: React.FC<InboxModalProps> = ({
         <div className="inbox-header">
           <h3>
             <span> Message Center</span>
-            <button className="modal-close" onClick={onClose}>
+            <button 
+              type="button" 
+              className="modal-close" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+              }}
+              aria-label="Close Message Center"
+            >
               &times;
             </button>
           </h3>
@@ -266,61 +305,70 @@ export const InboxModal: React.FC<InboxModalProps> = ({
           <div 
             className="dialog-box"
             style={{
-              background: 'var(--bg)',
-              borderRadius: '20px',
-              padding: '32px',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '24px',
+              padding: '32px 28px',
               maxWidth: '420px',
               width: '90%',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              animation: 'scaleIn 0.3s ease-out',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+              animation: 'scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
               position: 'relative',
+              boxSizing: 'border-box',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ textAlign: 'center' }}>
               <div style={{
-                width: '64px',
-                height: '64px',
+                width: '60px',
+                height: '60px',
                 borderRadius: '50%',
-                background: 'var(--lost-bg)',
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 20px',
+                margin: '0 auto 18px',
+                boxShadow: '0 8px 16px rgba(239, 68, 68, 0.15)',
               }}>
-                <i className="fas fa-trash-alt" style={{ fontSize: '24px', color: 'var(--lost)' }}></i>
+                <i className="fas fa-trash-alt" style={{ fontSize: '22px', color: '#ef4444' }}></i>
               </div>
               <h3 style={{ 
-                fontSize: '1.25rem', 
-                fontWeight: 700, 
-                marginBottom: '8px',
-                color: '#000',
+                fontSize: '1.3rem', 
+                fontWeight: 800, 
+                marginBottom: '10px',
+                color: '#0f172a',
+                fontFamily: "'Outfit', sans-serif",
               }}>
                 Delete Conversation?
               </h3>
               <p style={{ 
-                fontSize: '0.9rem', 
-                color: '#333', 
+                fontSize: '0.92rem', 
+                color: '#475569', 
                 marginBottom: '24px',
-                lineHeight: '1.5',
+                lineHeight: '1.55',
+                fontFamily: "'Outfit', sans-serif",
               }}>
-                Are you sure you want to permanently delete this conversation? This action cannot be undone.
+                Are you sure you want to permanently delete this conversation?<br />
+                <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.85rem', display: 'inline-block', marginTop: '6px' }}>
+                  ⚠️ This action cannot be undone.
+                </span>
               </p>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
                 onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ show: false, chatId: null, itemId: null, otherUserId: null }); }}
                 style={{
-                  padding: '12px 24px',
+                  padding: '11px 22px',
                   borderRadius: '12px',
-                  border: 'none',
-                  background: 'var(--bg-secondary)',
-                  color: '#000',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  color: '#334155',
                   fontSize: '0.9rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  minWidth: '100px',
+                  minWidth: '105px',
+                  fontFamily: "'Outfit', sans-serif",
                 }}
               >
                 Cancel
@@ -344,16 +392,18 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                   }
                 }}
                 style={{
-                  padding: '12px 24px',
+                  padding: '11px 22px',
                   borderRadius: '12px',
                   border: 'none',
-                  background: 'var(--lost)',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                   color: 'white',
                   fontSize: '0.9rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  minWidth: '100px',
+                  minWidth: '105px',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                  fontFamily: "'Outfit', sans-serif",
                 }}
               >
                 Delete

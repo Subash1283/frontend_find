@@ -6,6 +6,8 @@ interface NotificationsModalProps {
   markNotificationRead: (id: number) => void;
   markAllNotificationsRead: () => void;
   onNavigate?: (link: string) => void;
+  onOpenVerificationModal?: (code: string, itemTitle?: string, itemId?: number) => void;
+  showToast?: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -14,17 +16,19 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   markNotificationRead,
   markAllNotificationsRead,
   onNavigate,
+  onOpenVerificationModal,
+  showToast,
 }) => {
   return (
     <div className="modal active" onClick={onClose} style={{ zIndex: 1200 }}>
       <div 
         className="modal-card" 
         onClick={e => e.stopPropagation()} 
-        style={{ maxWidth: '500px', padding: '24px' }}
+        style={{ maxWidth: '520px', padding: '24px', borderRadius: '16px' }}
       >
         <div className="modal-title" style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: '12px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <i className="fas fa-bell"></i> Notifications Log
+            <i className="fas fa-bell" style={{ color: '#f59e0b' }}></i> Notifications Log
           </h3>
           <button className="modal-close" onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', margin: 0 }}>
             &times;
@@ -67,41 +71,121 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               You have no new notifications.
             </div>
           ) : (
-            notifications.map(notif => (
-              <div
-                key={notif.id}
-                className="alert-item"
-                style={{ 
-                  cursor: 'pointer', 
-                  padding: '12px 16px', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '8px', 
-                  marginBottom: '10px',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '10px',
-                  transition: 'background 0.2s',
-                  opacity: notif.isRead ? 0.6 : 1
-                }}
-                onClick={() => {
-                  if (!notif.isRead) markNotificationRead(notif.id);
-                  if (notif.link && onNavigate) {
-                    onNavigate(notif.link);
-                  }
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'var(--border-soft)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'var(--bg-secondary)';
-                }}
-              >
-                <i className="fas fa-bolt" style={{ color: 'var(--reward)', marginTop: '3px' }}></i>
-                <div style={{ fontSize: '0.9rem', lineHeight: '1.4' }}>
-                  {notif.message}
+            notifications.map(notif => {
+              // Extract verification code if message contains FINDIT-XXXX
+              const codeMatch = notif.message?.match(/(FINDIT-\d{4,6})/i);
+              const code = codeMatch ? codeMatch[1].toUpperCase() : null;
+
+              // Extract item title if present in quotes
+              const titleMatch = notif.message?.match(/"([^"]+)"/);
+              const itemTitle = titleMatch ? titleMatch[1] : undefined;
+
+              // Extract item ID if present in notification link
+              const itemLinkMatch = notif.link?.match(/\/items\/(\d+)/);
+              const itemId = itemLinkMatch ? Number(itemLinkMatch[1]) : undefined;
+
+              return (
+                <div
+                  key={notif.id}
+                  className="alert-item"
+                  style={{ 
+                    cursor: 'pointer', 
+                    padding: '14px 16px', 
+                    background: code ? '#ecfdf5' : 'var(--bg-secondary)', 
+                    border: code ? '1px solid #a7f3d0' : '1px solid transparent',
+                    borderRadius: '12px', 
+                    marginBottom: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    transition: 'all 0.2s ease',
+                    opacity: notif.isRead && !code ? 0.65 : 1,
+                    boxShadow: code ? '0 4px 12px rgba(16, 185, 129, 0.12)' : 'none',
+                  }}
+                  onClick={() => {
+                    if (!notif.isRead) markNotificationRead(notif.id);
+                    if (code && onOpenVerificationModal) {
+                      onOpenVerificationModal(code, itemTitle, itemId);
+                    } else if (notif.link && onNavigate) {
+                      onNavigate(notif.link);
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <i className={code ? "fas fa-key" : "fas fa-bolt"} style={{ color: code ? '#059669' : 'var(--reward)', marginTop: '3px' }}></i>
+                    <div style={{ fontSize: '0.9rem', lineHeight: '1.4', flex: 1, color: code ? '#065f46' : 'inherit', fontWeight: code ? 500 : 400 }}>
+                      {notif.message}
+                    </div>
+                  </div>
+
+                  {code && (
+                    <div 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        marginTop: '4px',
+                        padding: '8px 12px',
+                        background: '#ffffff',
+                        borderRadius: '8px',
+                        border: '1px dashed #34d399',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', textTransform: 'uppercase' }}>Code:</span>
+                        <strong style={{ fontSize: '1.1rem', color: '#2563eb', fontFamily: 'monospace', letterSpacing: '1px' }}>{code}</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(code);
+                            if (showToast) showToast(`Copied ${code} to clipboard!`, 'success');
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: '#059669',
+                            color: '#fff',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <i className="fas fa-copy"></i> Copy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenVerificationModal) onOpenVerificationModal(code, itemTitle, itemId);
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #2563eb',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          View Popup
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

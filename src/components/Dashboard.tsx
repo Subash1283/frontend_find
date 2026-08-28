@@ -21,6 +21,7 @@ import { AdminPanel } from './AdminPanel';
 import { AIChatbot } from './AIChatbot';
 import { NotificationsModal } from './NotificationsModal';
 import { PlatformReviewModal } from './PlatformReviewModal';
+import { ClaimVerificationModal } from './ClaimVerificationModal';
 
 interface DashboardProps {
   token: string;
@@ -88,6 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [activeChat, setActiveChat] = useState<{ itemId: number; title: string; otherUserId: number } | null>(null);
   const [showPlatformReview, setShowPlatformReview] = useState(false);
   const [reviewItemId, setReviewItemId] = useState<number | null>(null);
+  const [verificationModalData, setVerificationModalData] = useState<{ show: boolean; code: string; itemTitle?: string; itemId?: number; otherUserId?: number } | null>(null);
 
   // Map references
   const dashboardMapRef = useRef<L.Map | null>(null);
@@ -106,6 +108,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
     currentUser?.verificationStatus !== 'verified';
 
   const closeOverlay = useCallback(() => {
+    setShowInbox(false);
+    setShowProfile(false);
+    setShowReport(false);
+    setShowDetails(false);
+    setDetailsItemId(null);
+    setShowEdit(false);
+    setEditItemId(null);
+    setActiveChat(null);
+    setShowPlatformReview(false);
+    setReviewItemId(null);
     navigate(viewToPath(viewMode));
   }, [navigate, viewMode]);
 
@@ -333,9 +345,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }
     });
 
-    socket.on('inbox', (data: any[]) => {
-      // Calculate pending request counts
+    const processInboxData = (data: any[]) => {
+      if (!Array.isArray(data)) return;
       let pending = 0;
+      let unread = 0;
       data.forEach(c => {
         if (
           c.conversation &&
@@ -344,25 +357,48 @@ export const Dashboard: React.FC<DashboardProps> = ({
         ) {
           pending++;
         }
+        if (c.lastMessage && !c.lastMessage.isRead && Number(c.lastMessage.senderId ?? c.lastMessage.sender?.id) !== Number(currentUser.id)) {
+          unread++;
+        }
       });
       setPendingRequestsCount(pending);
-    });
+      setUnreadMessagesCount(unread);
+    };
+
+    const fetchInboxRest = async () => {
+      try {
+        const res = await fetch(`${apiBase}/chat/inbox`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          processInboxData(data);
+        }
+      } catch (e) {}
+    };
+
+    socket.on('inbox', processInboxData);
+    socket.on('inboxData', processInboxData);
 
     socket.on('newMessage', (msg: any) => {
-      if (Number(msg.sender?.id || msg.senderId) !== Number(currentUser.id)) {
+      const senderId = Number(msg.sender?.id ?? msg.senderId ?? msg.sender);
+      if (senderId !== Number(currentUser.id)) {
         setUnreadMessagesCount(prev => prev + 1);
         playSound('receive');
-        showToast(`🔔 New message from ${msg.sender?.name || 'someone'}`, 'info');
+        showToast(`New message from ${msg.sender?.name || 'User'}`, 'info');
       }
     });
 
     // Request initial inbox status
     socket.emit('getInbox');
+    fetchInboxRest();
 
-    // Fetch initial notifications and let sockets handle the real-time updates
+    // Fetch initial notifications and let background timer auto-sync
     fetchNotifications();
-    // Keep a much slower background fallback (every 2 minutes instead of 15s)
-    const interval = setInterval(fetchNotifications, 120000);
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchInboxRest();
+    }, 4000);
 
     return () => {
       socket.disconnect();
@@ -743,7 +779,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span className="nav-icon"><i className="fas fa-envelope"></i></span>
             <span>Inbox</span>
             {(pendingRequestsCount > 0 || unreadMessagesCount > 0) && (
-              <span className="nav-badge" style={{ background: 'var(--reward)', color: 'white' }}>
+              <span className="nav-badge">
                 {pendingRequestsCount + unreadMessagesCount}
               </span>
             )}
@@ -761,7 +797,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span className="nav-icon"><i className="fas fa-bell"></i></span>
             <span>Notifications</span>
             {unreadNotificationsCount > 0 && (
-              <span className="nav-badge" style={{ background: 'var(--reward)', color: 'white' }}>
+              <span className="nav-badge nav-badge-blue">
                 {unreadNotificationsCount}
               </span>
             )}
@@ -828,60 +864,75 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div
               className="dialog-box"
               style={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '0',
-                maxWidth: '450px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '24px',
+                padding: '32px 28px',
+                maxWidth: '440px',
                 width: '90%',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-                animation: 'scaleIn 0.3s ease-out',
-                overflow: 'hidden',
-                position: 'relative'
+                boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+                animation: 'scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                position: 'relative',
+                textAlign: 'center',
+                boxSizing: 'border-box',
               }}
             >
               <div style={{
-                background: 'linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)',
-                padding: '24px',
-                textAlign: 'center',
-                color: 'white'
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+                boxShadow: '0 8px 16px rgba(37, 99, 235, 0.15)',
               }}>
-                <i className="fas fa-bullhorn" style={{ fontSize: '2.5rem', marginBottom: '12px' }}></i>
-                <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>Important Announcement</h3>
+                <i className="fas fa-bullhorn" style={{ fontSize: '22px', color: '#2563eb' }}></i>
               </div>
               
-              <div style={{ padding: '24px', textAlign: 'center' }}>
-                <p style={{ 
-                  fontSize: '1.05rem', 
-                  color: '#334155', 
-                  lineHeight: '1.6',
-                  marginBottom: '28px',
-                  fontWeight: 500
-                }}>
-                  {announcements[0].message}
-                </p>
-                <button
-                  onClick={() => markNotificationRead(announcements[0].id)}
-                  style={{
-                    background: '#4f46e5',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 32px',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
-                    transition: 'transform 0.1s, background 0.2s',
-                    width: '100%'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = '#4338ca'}
-                  onMouseOut={(e) => e.currentTarget.style.background = '#4f46e5'}
-                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
-                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  Got it, Dismiss
-                </button>
-              </div>
+              <h3 style={{ 
+                fontSize: '1.3rem', 
+                fontWeight: 800, 
+                marginBottom: '12px',
+                color: '#0f172a',
+                fontFamily: "'Outfit', sans-serif",
+              }}>
+                Important Announcement
+              </h3>
+              
+              <p style={{ 
+                fontSize: '0.95rem', 
+                color: '#475569', 
+                lineHeight: '1.6',
+                marginBottom: '24px',
+                fontWeight: 500,
+                fontFamily: "'Outfit', sans-serif",
+              }}>
+                {announcements[0].message}
+              </p>
+
+              <button
+                onClick={() => markNotificationRead(announcements[0].id)}
+                style={{
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '13px 24px',
+                  borderRadius: '12px',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                  transition: 'all 0.2s ease',
+                  width: '100%',
+                  fontFamily: "'Outfit', sans-serif",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(37, 99, 235, 0.4)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37, 99, 235, 0.3)'; }}
+              >
+                Got it, Dismiss
+              </button>
             </div>
           </div>
         )}
@@ -1139,7 +1190,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
                               ⚠️ Sensitive Content
                             </span>
-                            {(isOwner || currentUser?.role === 'admin') && (
+                            {isOwner && (
                               <button
                                 className="reveal-btn"
                                 onClick={() =>
@@ -1377,79 +1428,98 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div 
             className="dialog-box"
             style={{
-              background: 'var(--bg)',
-              borderRadius: '20px',
-              padding: '32px',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '24px',
+              padding: '32px 28px',
               maxWidth: '420px',
               width: '90%',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              animation: 'scaleIn 0.3s ease-out',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+              animation: 'scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
               position: 'relative',
+              boxSizing: 'border-box',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ textAlign: 'center' }}>
               <div style={{
-                width: '64px',
-                height: '64px',
+                width: '60px',
+                height: '60px',
                 borderRadius: '50%',
-                background: 'var(--lost-bg)',
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 20px',
+                margin: '0 auto 18px',
+                boxShadow: '0 8px 16px rgba(239, 68, 68, 0.15)',
               }}>
-                <i className="fas fa-trash-alt" style={{ fontSize: '24px', color: 'var(--lost)' }}></i>
+                <i className="fas fa-trash-alt" style={{ fontSize: '22px', color: '#ef4444' }}></i>
               </div>
               <h3 style={{ 
-                fontSize: '1.25rem', 
-                fontWeight: 700, 
-                marginBottom: '8px',
-                color: '#000',
+                fontSize: '1.3rem', 
+                fontWeight: 800, 
+                marginBottom: '10px',
+                color: '#0f172a',
+                fontFamily: "'Outfit', sans-serif",
               }}>
                 Delete {deleteConfirm.itemType === 'user' ? 'User' : 'Item'}?
               </h3>
               <p style={{ 
-                fontSize: '0.9rem', 
-                color: '#333', 
+                fontSize: '0.92rem', 
+                color: '#475569', 
                 marginBottom: '24px',
-                lineHeight: '1.5',
+                lineHeight: '1.55',
+                fontFamily: "'Outfit', sans-serif",
               }}>
-                <strong>Are you sure you want to permanently delete <span style={{ color: '#000' }}>"{deleteConfirm.itemName}"</span>? This action cannot be undone.</strong>
+                Are you sure you want to permanently delete{' '}
+                <strong style={{ color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px' }}>
+                  "{deleteConfirm.itemName}"
+                </strong>
+                ?<br />
+                <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.85rem', display: 'inline-block', marginTop: '6px' }}>
+                  ⚠️ This action cannot be undone.
+                </span>
               </p>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
                 onClick={() => setDeleteConfirm({ show: false, itemId: null, itemName: '', itemType: 'item' })}
                 style={{
-                  padding: '12px 24px',
+                  padding: '11px 22px',
                   borderRadius: '12px',
-                  border: 'none',
-                  background: 'var(--bg-secondary)',
-                  color: '#000',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  color: '#334155',
                   fontSize: '0.9rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  minWidth: '100px',
+                  minWidth: '105px',
+                  fontFamily: "'Outfit', sans-serif",
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; }}
               >
                 Cancel
               </button>
               <button
                 onClick={deleteConfirm.itemType === 'user' ? confirmDeleteUser : confirmDeleteItem}
                 style={{
-                  padding: '12px 24px',
+                  padding: '11px 22px',
                   borderRadius: '12px',
                   border: 'none',
-                  background: 'var(--lost)',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                   color: 'white',
                   fontSize: '0.9rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  minWidth: '100px',
+                  minWidth: '105px',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                  fontFamily: "'Outfit', sans-serif",
                 }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.4)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)'; }}
               >
                 Delete
               </button>
@@ -1499,6 +1569,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           onClose={() => setShowNotifications(false)}
           markNotificationRead={markNotificationRead}
           markAllNotificationsRead={markAllNotificationsRead}
+          showToast={showToast}
+          onOpenVerificationModal={(code, itemTitle, itemId) => {
+            setShowNotifications(false);
+            setVerificationModalData({ show: true, code, itemTitle, itemId });
+          }}
           onNavigate={(link) => {
             setShowNotifications(false);
             // If the link is an internal dashboard path or inbox, navigate there
@@ -1512,6 +1587,62 @@ export const Dashboard: React.FC<DashboardProps> = ({
               navigate(link);
             }
           }}
+        />
+      )}
+
+      {verificationModalData?.show && (
+        <ClaimVerificationModal
+          verificationCode={verificationModalData.code}
+          itemTitle={verificationModalData.itemTitle}
+          itemId={verificationModalData.itemId}
+          otherUserId={verificationModalData.otherUserId}
+          onClose={() => setVerificationModalData(null)}
+          onOpenChat={async (targetItemId, targetTitle, targetUserId) => {
+            const currentData = verificationModalData;
+            setVerificationModalData(null);
+            
+            const effectiveItemId = targetItemId || currentData?.itemId;
+            const effectiveUserId = targetUserId || currentData?.otherUserId;
+            const effectiveTitle = targetTitle || currentData?.itemTitle || 'Chat';
+
+            if (effectiveItemId && effectiveUserId) {
+              setActiveChat({
+                itemId: Number(effectiveItemId),
+                title: effectiveTitle,
+                otherUserId: Number(effectiveUserId),
+              });
+              return;
+            }
+
+            // Fallback lookup from user's inbox threads
+            try {
+              const res = await fetch(`${apiBase}/chat/inbox`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (res.ok) {
+                const chats = await res.json();
+                const match = chats.find((c: any) => 
+                  (effectiveItemId && Number(c.item?.id) === Number(effectiveItemId)) ||
+                  (effectiveTitle && c.item?.title?.toLowerCase().includes(effectiveTitle.toLowerCase()))
+                );
+
+                if (match && match.item && match.otherUser) {
+                  setActiveChat({
+                    itemId: Number(match.item.id),
+                    title: match.item.title || effectiveTitle,
+                    otherUserId: Number(match.otherUser.id),
+                  });
+                  return;
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to find matching chat thread', err);
+            }
+
+            // Final fallback
+            setShowInbox(true);
+          }}
+          showToast={showToast}
         />
       )}
     </div>

@@ -41,6 +41,22 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [tempLng, setTempLng] = useState<number | null>(null);
   const [mapSearch, setMapSearch] = useState('');
   const [mapSearching, setMapSearching] = useState(false);
+  const isAiCategoryChangeRef = useRef(false);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Generate thumbnail preview URLs when files change
+  useEffect(() => {
+    if (!files || files.length === 0) {
+      setImagePreviews([]);
+      return;
+    }
+    const urls = files.map(file => URL.createObjectURL(file));
+    setImagePreviews(urls);
+
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [files]);
 
   const handleMapSearch = async () => {
     if (!mapSearch.trim()) return;
@@ -74,8 +90,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const isFound = type === 'found';
 
-  // Reset files when category or documentType changes
+  // Reset files when category or documentType changes manually
   useEffect(() => {
+    if (isAiCategoryChangeRef.current) {
+      isAiCategoryChangeRef.current = false;
+      return;
+    }
     setFiles(null);
     const fileInput = document.getElementById('report-images') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
@@ -123,7 +143,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       }
       setFiles(compressedFiles);
 
-      // Trigger AI Auto-fill if it's not a document
+      // Trigger AI Auto-fill ONLY if category is NOT Documents
       if (category !== 'Documents' && compressedFiles[0]) {
         handleAutoFill(compressedFiles[0]);
       }
@@ -139,9 +159,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   const handleAutoFill = async (file: File) => {
-    if (!file) return;
+    if (!file || category === 'Documents') return;
     setIsAutoFilling(true);
-    showToast(' AI is analyzing the image.Please wait ...', 'info');
+    showToast('AI is analyzing the image...', 'info');
     
     const formData = new FormData();
     formData.append('image', file);
@@ -161,12 +181,13 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           setTitle(data.title);
           populated = true;
         }
-        if (data.category && data.category !== 'Other' && category === 'Electronics') { // default is Electronics
+        if (data.category && data.category !== 'Other' && data.category !== 'Documents' && category === 'Electronics') {
+          isAiCategoryChangeRef.current = true;
           setCategory(data.category);
           populated = true;
-        } else if (data.category && data.category !== 'Other' && category !== data.category) {
-          // If they haven't manually changed it away from default, or we just want to help
-          if (!title) { // simple heuristic: if title was empty, they probably haven't started filling the form
+        } else if (data.category && data.category !== 'Other' && data.category !== 'Documents' && category !== data.category) {
+          if (!title) {
+             isAiCategoryChangeRef.current = true;
              setCategory(data.category);
              populated = true;
           }
@@ -177,10 +198,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         }
 
         if (populated) {
-          showToast(' Form auto-filled successfully!', 'success');
+          showToast('⚡ Form auto-filled with AI!', 'success');
         } else if (data.title || data.description) {
-           // We received data but fields were already populated, maybe prompt them or do nothing.
-           showToast('AI analysis complete (existing fields kept)', 'info');
+           showToast('AI analysis complete (kept your existing fields)', 'info');
         }
       }
     } catch (e) {
@@ -531,8 +551,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <label htmlFor="report-images">
                   Attach Images (Max 2)
                   {isAutoFilling && (
-                    <span style={{ marginLeft: 'F12px', color: 'var(--brand)', fontSize: '0.85rem' }}>
-                      <i className="fas fa-circle-notch fa-spin"></i> Auto-filling with AI...
+                    <span style={{ marginLeft: '12px', color: '#2563eb', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <i className="fas fa-circle-notch fa-spin"></i> AI Analyzing & Auto-filling...
                     </span>
                   )}
                 </label>
@@ -544,7 +564,52 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   accept="image/*"
                   onChange={handleFileChange}
                 />
-                 <small style={{ color: 'var(--text-soft)', marginTop: '4px', display: 'block' }}>
+
+                {imagePreviews.length > 0 && (
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+                    {imagePreviews.map((src, index) => (
+                      <div key={index} style={{ position: 'relative', width: '84px', height: '84px', borderRadius: '12px', overflow: 'hidden', border: '2px solid #2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}>
+                        <img src={src} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <span style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(15, 23, 42, 0.75)', color: 'white', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                          Photo #{index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedFiles = files?.filter((_, i) => i !== index) || [];
+                            setFiles(updatedFiles.length > 0 ? updatedFiles : null);
+                            if (updatedFiles.length === 0) {
+                              const fileInput = document.getElementById('report-images') as HTMLInputElement;
+                              if (fileInput) fileInput.value = '';
+                            }
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '22px',
+                            height: '22px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                          }}
+                          title="Remove image"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <small style={{ color: 'var(--text-soft)', marginTop: '6px', display: 'block' }}>
                   {category === 'Documents'
                     ? `⚠️ Documents of type "${documentType.replace('_', ' ')}" require EXACTLY ${(documentType === 'passport' || documentType === 'driving_license' || documentType === 'certificate') ? '1 image' : '2 images (front and back)'}.`
                     : 'Max 2 photos. Supported formats: JPG, PNG.'}
@@ -643,7 +708,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         <div className="modal active" style={{ zIndex: 2000 }} onClick={handleMismatchDismiss}>
           <div className="modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-title">
-              <h3>⚠️ Image Verification Alert</h3>
+              <h3> Image Verification Alert</h3>
               <button className="modal-close" onClick={handleMismatchDismiss}>
                 &times;
               </button>
