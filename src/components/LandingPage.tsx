@@ -807,7 +807,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
       <div className="premium-ambient-light"></div>
 
       {/* GATEWAY ENTRY SCREEN */}
-      <div className={`gateway-screen ${hasEntered ? 'entered' : ''}`}>
+      <div className={`gateway-screen ${hasEntered ? 'entered' : ''}`} style={hasEntered ? { display: 'none' } : {}}>
         <div className="gateway-bg-glow"></div>
         <div className="gateway-logo-container">
           <div className="gateway-logo">FINDIT</div>

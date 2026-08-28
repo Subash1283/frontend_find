@@ -219,25 +219,26 @@ body {
   color: white;
   min-height: 100vh;
   position: relative;
+  isolation: isolate;
 }
 
-.bg-animation {
-  position: fixed;
+.landing-body .bg-animation {
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -2;
+  z-index: 0;
   background: linear-gradient(125deg, #0a0f1c 0%, #0f172a 50%, #1e1b3a 100%);
 }
 
-.floating-shapes {
-  position: fixed;
+.landing-body .floating-shapes {
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
 }
 
@@ -1622,7 +1623,7 @@ body {
   min-height: 100vh;
   background: var(--page-bg);
   color: var(--text-main);
-  width: 100vw;
+  width: 100%;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
@@ -1908,8 +1909,9 @@ a.sidebar-logo {
 .main {
   flex: 1;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
   padding: 32px 36px 48px;
+  min-width: 0;
   max-width: calc(100vw - var(--sidebar-w));
 }
 
@@ -3215,40 +3217,114 @@ input[type="file"] {
 /* ==========================================================================
    RESPONSIVE DESIGN RULES
    ========================================================================== */
+
+/* --- Sidebar backdrop (hidden by default, shown on mobile when open) --- */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  cursor: pointer;
+  z-index: 39;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+/* --- Hamburger toggle button (hidden on desktop, shown on mobile) --- */
+.sidebar-toggle {
+  display: none;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, #ffffff);
+  color: var(--text-main, #0f172a);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.sidebar-toggle:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
 @media (max-width: 900px) {
-  :root {
-    --sidebar-w: 72px;
+  /* Show hamburger and enable backdrop */
+  .sidebar-toggle {
+    display: inline-flex;
   }
 
-  .sidebar-logo span.logo-text,
-  .nav-item span:not(.nav-icon),
-  .nav-badge,
-  .user-info,
-  .logout-btn {
-    display: none;
+  .sidebar-backdrop {
+    display: block;
   }
 
-  .sidebar-logo {
-    justify-content: center;
-    padding: 20px 8px;
+  /* Backdrop becomes visible when sidebar is open */
+  .dashboard-root.sidebar-open .sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
   }
 
-  .nav-item {
-    justify-content: center;
-    padding: 10px;
+  /* Sidebar becomes a fixed overlay drawer */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px !important;
+    min-width: 260px !important;
+    height: 100vh;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.12);
   }
 
-  .nav-item::before {
-    display: none;
+  /* Restore full sidebar text (not icon-only) when drawer is open */
+  .sidebar .logo-text,
+  .sidebar .nav-item span:not(.nav-icon),
+  .sidebar .nav-badge,
+  .sidebar .user-info,
+  .sidebar .logout-btn {
+    display: initial;
   }
 
-  .user-card {
-    justify-content: center;
+  .sidebar .nav-item {
+    justify-content: flex-start;
+    padding: 10px 16px;
   }
 
+  .sidebar .nav-item::before {
+    display: block;
+  }
+
+  .sidebar .sidebar-logo {
+    justify-content: flex-start;
+    padding: 28px 24px 24px;
+  }
+
+  .sidebar .user-card {
+    justify-content: flex-start;
+  }
+
+  /* Slide sidebar in when open */
+  .dashboard-root.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  /* Main takes full width since sidebar is an overlay */
   .main {
-    padding: 20px 16px 32px;
+    width: 100% !important;
     max-width: 100vw;
+    padding: 20px 16px 32px;
   }
 
   .stats-grid {

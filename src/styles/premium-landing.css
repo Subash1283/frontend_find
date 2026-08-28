@@ -14,6 +14,8 @@
   background: #ffffff;
   color: #0f172a;
   font-family: "Outfit", "Inter", sans-serif;
+  /* Isolate stacking context so fixed children don't bleed onto the dashboard */
+  isolation: isolate;
 }
 
 .premium-landing-body *,
@@ -166,10 +168,10 @@ input {
    ========================================================================== */
 
 .premium-bg-grid {
-  position: fixed;
+  position: absolute;
   inset: 0;
 
-  z-index: -2;
+  z-index: 0;
 
   background-image:
     linear-gradient(
@@ -202,7 +204,7 @@ input {
 }
 
 .premium-ambient-light {
-  position: fixed;
+  position: absolute;
 
   top: 0;
   left: 50%;
@@ -212,7 +214,7 @@ input {
 
   transform: translateX(-50%);
 
-  z-index: -1;
+  z-index: 0;
 
   background:
     radial-gradient(

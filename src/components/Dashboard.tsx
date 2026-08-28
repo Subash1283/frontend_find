@@ -553,36 +553,53 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Initialize and update Full Map View
   useEffect(() => {
-    if (!fullMapRef.current) {
-      const container = document.getElementById('fullMap');
-      if (container) {
-        fullMapRef.current = L.map('fullMap', {
-          zoomControl: false,
-        }).setView([27.7172, 85.3240], 13);
-
-        L.tileLayer(
-          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19,
-          }
-        ).addTo(fullMapRef.current);
-
-        L.control.zoom({ position: 'topright' }).addTo(fullMapRef.current);
+    if (viewMode === 'mapview') {
+      // Re-initialize every time the view becomes active
+      // (the #fullMap div is unmounted when viewMode changes, so the old
+      //  Leaflet instance is left dangling — destroy it first)
+      if (fullMapRef.current) {
+        fullMarkersRef.current.forEach(m => fullMapRef.current?.removeLayer(m));
+        fullMarkersRef.current = [];
+        fullMapRef.current.remove();
+        fullMapRef.current = null;
       }
-    }
 
-    if (viewMode === 'mapview' && fullMapRef.current) {
-      setTimeout(() => {
-        fullMapRef.current?.invalidateSize(true);
-      }, 50);
+      // Small delay to let React flush the DOM before Leaflet reads it
+      const timer = setTimeout(() => {
+        const container = document.getElementById('fullMap');
+        if (!container) return;
+
+        const map = L.map('fullMap', { zoomControl: false }).setView([27.7172, 85.3240], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(map);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        fullMapRef.current = map;
+
+        // Invalidate size after render
+        setTimeout(() => map.invalidateSize(true), 50);
+      }, 30);
+
+      return () => clearTimeout(timer);
+    } else {
+      // Leaving mapview: destroy the map so the next visit gets a fresh one
+      if (fullMapRef.current) {
+        fullMarkersRef.current.forEach(m => fullMapRef.current?.removeLayer(m));
+        fullMarkersRef.current = [];
+        fullMapRef.current.remove();
+        fullMapRef.current = null;
+      }
     }
   }, [viewMode]);
 
-  // Update Full Map Markers
+  // Update Full Map Markers — re-run whenever items or viewMode changes
   useEffect(() => {
-    if (!fullMapRef.current) return;
-    
+    if (!fullMapRef.current || viewMode !== 'mapview') return;
+
     // CLEAR OLD MARKERS
     fullMarkersRef.current.forEach(m => fullMapRef.current?.removeLayer(m));
     fullMarkersRef.current = [];
@@ -627,7 +644,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           fullMarkersRef.current.push(marker);
         });
-  }, [items, navigate]);
+  }, [items, navigate, viewMode]);
 
   // Item card deletion - opens confirmation dialog
   const openDeleteDialog = (id: number, name: string, itemType: 'item' | 'user' = 'item') => {
