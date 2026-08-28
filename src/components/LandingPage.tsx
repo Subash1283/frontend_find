@@ -3,7 +3,6 @@ import '../styles/premium-landing.css';
 import { SuspendedAccountModal, parseSuspensionReason } from './SuspendedAccountModal';
 import { validateEmailAuthenticity, getEmailDomainSuggestions } from '../utils/emailValidation';
 
-import backpackImg from '../assets/blue_backpack.png';
 import headphonesImg from '../assets/beige_headphones.png';
 import walletImg from '../assets/brown_wallet.png';
 
@@ -77,7 +76,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
 
   const handleSendMagicLink = async () => {
     if (!loginEmail.trim()) {
-      showStatus(setLoginStatus, '❌ Please enter your email address first', 'error');
+      showStatus(setLoginStatus, ' Please enter your email address first', 'error');
       return;
     }
     setIsSendingMagicLink(true);
@@ -182,15 +181,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
             if (entry.target === statsRef.current) {
               setStatsVisible(true);
             }
+            observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.15 }
     );
 
-    document.querySelectorAll('.animate-on-scroll').forEach(el => {
-      observer.observe(el);
-    });
+    const elements = document.querySelectorAll('.animate-on-scroll');
+    elements.forEach(el => observer.observe(el));
 
     return () => observer.disconnect();
   }, []);
@@ -207,24 +206,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   useEffect(() => {
     if (!statsVisible) return;
     const duration = 800; // ms
-    const targets = [{ setter: setCountUsers, target: 100 }, { setter: setCountItems, target: 5 }, { setter: setCountRate, target: 98 }];
-    const intervals = targets.map(({ setter, target }) => {
-      const steps = 40;
-      const increment = target / steps;
-      const delay = duration / steps;
-      let current = 0;
-      const id = setInterval(() => {
-        current += increment;
-        if (current >= target) {
-          setter(target);
-          clearInterval(id);
-        } else {
-          setter(Math.floor(current));
-        }
-      }, delay);
-      return id;
-    });
-    return () => intervals.forEach(clearInterval);
+    const startTime = performance.now();
+    let animationFrameId: number;
+
+    const step = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      // Ease out quad formula for smooth decelerating count-up
+      const easeProgress = 1 - (1 - progress) * (1 - progress);
+      setCountUsers(Math.floor(easeProgress * 100));
+      setCountItems(Math.floor(easeProgress * 5));
+      setCountRate(Math.floor(easeProgress * 98));
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(step);
+      } else {
+        setCountUsers(100);
+        setCountItems(5);
+        setCountRate(98);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animationFrameId);
   }, [statsVisible]);
 
 
@@ -891,8 +894,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
           </div>
 
           <div className="hero-right-cards">
-            <div className="card-item backpack-card">
-              <img src={backpackImg} alt="Blue Backpack" />
+            <div className="card-item gadgets-card">
+              <img src={catElectronicsImg} alt="Electronics" />
             </div>
             <div className="card-item headphones-card">
               <img src={headphonesImg} alt="Beige Headphones" />
@@ -904,7 +907,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
               <div className="match-icon"><i className="fas fa-check-circle"></i></div>
               <div className="match-info">
                 <strong>Match Found!</strong>
-                <span>Your lost backpack might have been found.</span>
+                <span>Your lost electronic gadget might have been found.</span>
                 <button className="match-btn" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}>View Details</button>
               </div>
             </div>
@@ -944,29 +947,64 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
           </div>
         </div>
 
-        {/* BENTO BOX FEATURES */}
+        {/* VERTICAL ANIMATED FEATURE CARDS */}
         <div className="premium-section features" id="features">
           <h2 className="premium-section-title animate-on-scroll">How It Works</h2>
-          <div className="bento-grid">
-            <div className="bento-card bento-card-large animate-on-scroll stagger-1">
-              <div className="bento-icon">⚙️</div>
+          <div className="vertical-feature-grid">
+            <div className="vertical-feature-card animate-on-scroll stagger-1">
+              <div className="vertical-card-top">
+                <div className="vertical-feature-icon">
+                  <i className="fas fa-brain"></i>
+                </div>
+                <span className="vertical-step-badge">Step 01</span>
+              </div>
               <h3>AI Matching Algorithm</h3>
-              <p>Our intelligent system automatically cross-references lost reports with found items in real-time. It analyzes descriptions, categories, and visual data to immediately notify you of highly probable matches.</p>
+              <p>Our intelligent system automatically cross-references lost reports with found items in real-time. It analyzes descriptions, categories, and visual data to immediately notify you of matches.</p>
+              <div className="vertical-card-footer">
+                <span className="feature-tag"><i className="fas fa-bolt"></i> Real-time Scanner</span>
+              </div>
             </div>
-            <div className="bento-card animate-on-scroll stagger-2">
-              <div className="bento-icon">📌</div>
+
+            <div className="vertical-feature-card animate-on-scroll stagger-2">
+              <div className="vertical-card-top">
+                <div className="vertical-feature-icon">
+                  <i className="fas fa-map-marked-alt"></i>
+                </div>
+                <span className="vertical-step-badge">Step 02</span>
+              </div>
               <h3>Smart Maps</h3>
-              <p>Interactive location tracking showing where items are frequently lost or found in your specific area.</p>
+              <p>Interactive location tracking showing where items are frequently lost or found in your specific area, complete with geo-fenced search alerts.</p>
+              <div className="vertical-card-footer">
+                <span className="feature-tag"><i className="fas fa-compass"></i> Geo-Radar</span>
+              </div>
             </div>
-            <div className="bento-card animate-on-scroll stagger-1">
-              <div className="bento-icon">🛡️</div>
+
+            <div className="vertical-feature-card animate-on-scroll stagger-3">
+              <div className="vertical-card-top">
+                <div className="vertical-feature-icon">
+                  <i className="fas fa-user-shield"></i>
+                </div>
+                <span className="vertical-step-badge">Step 03</span>
+              </div>
               <h3>Secure Verification</h3>
-              <p>Built-in identity checks ensure valuable items are only returned to their rightful verified owners.</p>
+              <p>Built-in identity checks and 6-digit claim verification codes ensure valuable items are only returned to their rightful verified owners.</p>
+              <div className="vertical-card-footer">
+                <span className="feature-tag"><i className="fas fa-lock"></i> Fraud Protection</span>
+              </div>
             </div>
-            <div className="bento-card bento-card-large animate-on-scroll stagger-2">
-              <div className="bento-icon">📩</div>
+
+            <div className="vertical-feature-card animate-on-scroll stagger-4">
+              <div className="vertical-card-top">
+                <div className="vertical-feature-icon">
+                  <i className="fas fa-comment-medical"></i>
+                </div>
+                <span className="vertical-step-badge">Step 04</span>
+              </div>
               <h3>Encrypted Chat</h3>
-              <p>Communicate securely with finders without revealing your personal contact information until you're ready to arrange a safe meetup.</p>
+              <p>Communicate securely with finders without revealing your personal contact information until you are ready to arrange a safe meetup.</p>
+              <div className="vertical-card-footer">
+                <span className="feature-tag"><i className="fas fa-shield-alt"></i> Anonymous P2P</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1059,9 +1097,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                   <span className="footer-logo-text">FIND<span>IT</span></span>
                 </div>
                 <p className="footer-brand-desc">
-                  Reconnecting people with what matters most through AI-driven matching and secure community reporting.
+                  FindIT is a next-generation AI-powered lost and found ecosystem dedicated to reconnecting people with their missing valuables. By pairing real-time computer vision analysis with geo-fenced community reporting, FindIT delivers rapid, privacy-first item recovery across Nepal.
                 </p>
-                <div className="footer-socials">
+                <div className="footer-trust-pills">
+                  <span className="trust-pill"><i className="fas fa-shield-alt"></i> 256-bit Encrypted</span>
+                  <span className="trust-pill"><i className="fas fa-robot"></i> AI Vision Matching</span>
+                  <span className="trust-pill"><i className="fas fa-user-check"></i> Identity Verified</span>
+                </div>
+                <div className="footer-socials" style={{ marginTop: '1.25rem' }}>
                   <a href="https://facebook.com" target="_blank" rel="noreferrer" className="social-pill" aria-label="Facebook">
                     <i className="fab fa-facebook-f"></i>
                   </a>
@@ -1077,36 +1120,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                 </div>
               </div>
 
-              {/* Column 1: Platform */}
+              {/* Column 1: How It Works & Ecosystem */}
               <div className="footer-col">
-                <h4>Platform</h4>
+                <h4>How It Works</h4>
                 <ul>
-                  <li><a href="#features">How It Works</a></li>
-                  <li><a href="#features">AI Matching</a></li>
-                  <li><a href="#categories">Recovered Items</a></li>
-                  <li><a href="#about">Community Trust</a></li>
+                  <li><a href="#features"><i className="fas fa-camera text-accent"></i> AI Photo Auto-Tagging</a></li>
+                  <li><a href="#features"><i className="fas fa-map-marker-alt text-accent"></i> Geo-Fenced Radius Alerts</a></li>
+                  <li><a href="#features"><i className="fas fa-lock text-accent"></i> Sensitive Document Blur</a></li>
+                  <li><a href="#features"><i className="fas fa-key text-accent"></i> 6-Digit Claim Verification</a></li>
+                  <li><a href="#features"><i className="fas fa-comments text-accent"></i> End-to-End P2P Chat</a></li>
                 </ul>
               </div>
 
-              {/* Column 2: Categories */}
+              {/* Column 2: Popular Categories */}
               <div className="footer-col">
-                <h4>Categories</h4>
+                <h4>Item Categories</h4>
                 <ul>
-                  <li><a href="#categories">Electronics</a></li>
-                  <li><a href="#categories">Documents & IDs</a></li>
-                  <li><a href="#categories">Keys & Fobs</a></li>
-                  <li><a href="#categories">Bags & Luggage</a></li>
-                  <li><a href="#categories">Jewelry & Watches</a></li>
+                  <li><a href="#categories">Smartphones & Laptops</a></li>
+                  <li><a href="#categories">Citizenship & Passports</a></li>
+                  <li><a href="#categories">Keys & Remote Fobs</a></li>
+                  <li><a href="#categories">Wallets, Cash & Cards</a></li>
+                  <li><a href="#categories">Backpacks & Luggage</a></li>
+                  <li><a href="#categories">Jewelry & Timepieces</a></li>
                 </ul>
               </div>
 
-              {/* Column 3: Legal & Help */}
+              {/* Column 3: Legal, Support & Trust */}
               <div className="footer-col">
-                <h4>Legal & Help</h4>
+                <h4>Help & Legal Trust</h4>
                 <ul>
                   <li>
                     <a href="#" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Privacy Policy', body: 'We value your privacy. All your data is encrypted and secure. We will never sell or misuse your personal information. Your identity is kept anonymous until you choose to reveal it during item verification.'}); }}>
-                      Privacy Policy
+                      Privacy & Data Security
                     </a>
                   </li>
                   <li>
@@ -1115,11 +1160,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                     </a>
                   </li>
                   <li>
-                    <a href="#" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Contact Us', body: 'Need help? You can reach our support team 24/7 at support@findit.gmail.com. We typically respond within 2-4 hours.'}); }}>
-                      Contact Us
+                    <a href="#" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Contact Support', body: 'Need assistance or have a safety concern? Our dedicated support team is available 24/7 at support@findit.gmail.com. We respond within 2-4 hours.'}); }}>
+                      Contact Support 24/7
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setInfoModalContent({title: 'Safety Guidelines', body: 'Always meet in public, well-lit places during item handovers. Verify the 6-digit handover code inside the platform before giving away any item.'}); }}>
+                      Safe Handover Guide
                     </a>
                   </li>
                 </ul>
+              </div>
+            </div>
+
+            {/* Platform Overview Banner Card */}
+            <div className="footer-explanation-card">
+              <div className="explanation-icon">
+                <i className="fas fa-info-circle"></i>
+              </div>
+              <div className="explanation-content">
+                <h5>About FindIT Lost & Found Platform</h5>
+                <p>
+                  FindIT bridges the gap between lost belongings and honest finders. Using advanced neural computer vision, lost reports are instantly cross-referenced against found item postings in real time. Sensitive identity documents are automatically obscured for privacy, ensuring safe, verified recoveries for citizens and venue partners nationwide.
+                </p>
               </div>
             </div>
 
@@ -1128,8 +1191,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                 © {new Date().getFullYear()} FindIT Technologies Inc. All rights reserved.
               </div>
               <div className="footer-badges">
-                <span>🔒 256-bit Encrypted</span>
-                <span>⚡ Instant AI Match</span>
+                <span>🔒 256-Bit SSL Encrypted</span>
+                <span>⚡ Real-Time AI Matcher</span>
+                <span>🇳🇵 Nepal Community Network</span>
               </div>
             </div>
           </div>

@@ -116,6 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowEdit(false);
     setEditItemId(null);
     setActiveChat(null);
+    setShowNotifications(false);
     setShowPlatformReview(false);
     setReviewItemId(null);
     navigate(viewToPath(viewMode));
@@ -124,6 +125,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Keep UI in sync with URL (browser back/forward, direct links, OAuth redirect)
   useEffect(() => {
     const parsed = parseDashboardPath(location.pathname);
+
+    // Cleanly dismiss irrelevant overlays when switching routes
+    if (parsed.kind !== 'inbox') setShowInbox(false);
+    if (parsed.kind !== 'profile') setShowProfile(false);
+    if (parsed.kind !== 'report') setShowReport(false);
+    if (parsed.kind !== 'item') { setShowDetails(false); setDetailsItemId(null); }
+    if (parsed.kind !== 'edit') { setShowEdit(false); setEditItemId(null); }
+    if (parsed.kind !== 'chat') setActiveChat(null);
+    setShowNotifications(false);
 
     if (parsed.kind === 'unknown') {
       navigate(DASHBOARD_PATHS.home, { replace: true });
@@ -136,16 +146,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return;
       }
       setViewMode(parsed.view);
-      setShowInbox(false);
-      setShowProfile(false);
-      setShowReport(false);
-      setShowDetails(false);
-      setDetailsItemId(null);
-      setShowEdit(false);
-      setEditItemId(null);
-      setActiveChat(null);
-      setShowPlatformReview(false);
-      setReviewItemId(null);
       return;
     }
 
@@ -201,18 +201,49 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const t = audioCtx.currentTime;
 
       if (type === 'send') {
+        // High-end Swiss "Swish & Crystal Chime" Audio Synthesis
+        // 1. Swish Noise sweep (air swoosh)
+        const bufferSize = audioCtx.sampleRate * 0.08;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1600, t);
+        filter.frequency.exponentialRampToValueAtTime(4200, t + 0.06);
+        filter.Q.setValueAtTime(4, t);
+
+        const noiseGain = audioCtx.createGain();
+        noiseGain.gain.setValueAtTime(0.3, t);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+
+        // 2. Crystal Swiss ping tone (pure harmonic pop)
         const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        const oscGain = audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(450, t);
-        osc.frequency.exponentialRampToValueAtTime(150, t + 0.08);
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.4, t + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
-        osc.start(t);
-        osc.stop(t + 0.1);
+        osc.frequency.setValueAtTime(1560, t + 0.01);
+        osc.frequency.exponentialRampToValueAtTime(980, t + 0.08);
+
+        oscGain.gain.setValueAtTime(0, t);
+        oscGain.gain.linearRampToValueAtTime(0.35, t + 0.012);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+
+        osc.connect(oscGain);
+        oscGain.connect(audioCtx.destination);
+
+        noise.start(t);
+        osc.start(t + 0.005);
+        osc.stop(t + 0.09);
       } else {
         const osc1 = audioCtx.createOscillator();
         const osc2 = audioCtx.createOscillator();
@@ -275,7 +306,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data);
+        setNotifications(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
+          return data;
+        });
       }
     } catch (e) {}
   }, [apiBase, token]);
@@ -398,7 +432,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const interval = setInterval(() => {
       fetchNotifications();
       fetchInboxRest();
-    }, 4000);
+    }, 20000);
 
     return () => {
       socket.disconnect();
@@ -451,8 +485,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const mapContainer = document.getElementById('map');
       if (mapContainer) {
         const map = L.map('map', { zoomControl: false }).setView([27.7172, 85.3240], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; CARTO',
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 19,
         }).addTo(map);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -527,9 +561,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         }).setView([27.7172, 85.3240], 13);
 
         L.tileLayer(
-          'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
           {
-            attribution: '&copy; CARTO',
+            attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19,
           }
         ).addTo(fullMapRef.current);
@@ -1078,8 +1112,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
 
         {/* 1. MAIN DASHBOARD VIEW */}
-        <div style={{ display: (viewMode === 'dashboard' || viewMode === 'myItems') ? 'block' : 'none' }}>
-          <>
+        {(viewMode === 'dashboard' || viewMode === 'myItems') && (
+          <div>
             {/* STATS PANEL */}
             <section className="stats-grid stats-grid-v2">
               <div className="stat-card-v2 stat-accent">
@@ -1229,18 +1263,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           </div>
                         )}
 
-                        <p className="desc-preview">
-                          {item.description && item.description.length > 120
-                            ? `${item.description.slice(0, 120)}...`
-                            : item.description || 'No description provided.'}
-                        </p>
-
                         <div className="card-actions">
                           <button
-                            className="icon-btn"
+                            className="btn-details"
                             onClick={() => navigate(DASHBOARD_PATHS.item(item.id))}
                           >
-                            <i className="fas fa-info-circle"></i> Info
+                            <i className="fas fa-eye"></i> View Details
                           </button>
 
                           {isOwner && (
@@ -1277,24 +1305,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 })
               )}
             </section>
-          </>
-        </div>
+          </div>
+        )}
 
         {/* 2. FULL GEO-MAP SECTION */}
-        <div style={{ display: viewMode === 'mapview' ? 'block' : 'none' }}>
-
-          <section
-            className="panel-card"
-            style={{ height: 'calc(100vh - 120px)', width: '100%' }}
-          >
-            <div className="panel-header">
-              <i className="fas fa-map-marked-alt"></i> Platform Active Claims Heatmap Tracker
-            </div>
-            <div className="map-wrapper">
-              <div id="fullMap" style={{ height: '100%', width: '100%', borderRadius: 0 }}></div>
-            </div>
-          </section>
-        </div>
+        {viewMode === 'mapview' && (
+          <div>
+            <section
+              className="panel-card"
+              style={{ height: 'calc(100vh - 180px)', width: '100%' }}
+            >
+              <div className="panel-header">
+                <i className="fas fa-map-marked-alt"></i> Platform Active Claims Heatmap Tracker
+              </div>
+              <div className="map-wrapper">
+                <div id="fullMap" style={{ height: '100%', width: '100%', borderRadius: 0 }}></div>
+              </div>
+            </section>
+          </div>
+        )}
 
         {/* 3. ADMIN INTERFACES */}
         {viewMode === 'admin' && currentUser?.role === 'admin' && (
