@@ -5,7 +5,6 @@ import { validateEmailAuthenticity, getEmailDomainSuggestions } from '../utils/e
 
 import headphonesImg from '../assets/beige_headphones.png';
 import walletImg from '../assets/brown_wallet.png';
-import testimonialsAvatarSprite from '../assets/testimonial_avatars.jpg';
 
 import catElectronicsImg from '../assets/category_electronics.png';
 import dummyWallet from '../assets/dummy_wallet.jpg';
@@ -210,30 +209,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     return 'just now';
   };
 
+  const defaultAvatars = [
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  ];
+
   const dummyTestimonials = [
     {
-      name: 'Sushma Thapa',
+      name: 'Sydney Cruz',
       location: 'Kathmandu',
       rating: 5,
       text: 'I lost my wallet with all my cards and cash. Thanks to FindIt, I got it back the very next day!',
-      avatarIndex: 0,
-      avatarUrl: null,
+      avatarUrl: defaultAvatars[0],
     },
     {
-      name: 'Rohit Shrestha',
+      name: 'Gem Wilson',
       location: 'Lalitpur',
       rating: 5,
       text: 'Amazing platform! I found an iPhone on the street and returned it to the owner through FindIt.',
-      avatarIndex: 1,
-      avatarUrl: null,
+      avatarUrl: defaultAvatars[1],
     },
     {
-      name: 'Anjali Adhikari',
+      name: 'Olivia Walker',
       location: 'Bhaktapur',
       rating: 5,
       text: 'Such a helpful community. We need more people and platforms like this.',
-      avatarIndex: 2,
-      avatarUrl: null,
+      avatarUrl: defaultAvatars[2],
     },
   ];
 
@@ -242,8 +244,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     location: r.reviewer?.address || 'Nepal',
     rating: r.rating,
     text: r.comment,
-    avatarIndex: i % 3,
-    avatarUrl: r.image ? `${apiBase.replace('/api', '')}/uploads/reviews/${r.image}` : null,
+    avatarUrl: r.image
+      ? `${apiBase.replace('/api', '')}/uploads/reviews/${r.image}`
+      : defaultAvatars[i % defaultAvatars.length],
   }));
 
   // Combine real testimonials and fallback dummy testimonials
@@ -1161,9 +1164,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         </div>
 
 
-        {/* HAPPY REUNIONS – only rendered when real customer reviews exist */}
+        {/* HAPPY REUNIONS */}
         {testimonials.length > 0 && (
-        <div className="happy-reunions-section animate-on-scroll" id="about">
+        <div className="happy-reunions-section animate-on-scroll" id="reunions">
           <div className="happy-reunions-header">
             <div className="happy-reunions-line" />
             <h2 className="happy-reunions-title">Happy Reunions</h2>
@@ -1184,30 +1187,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
             <div className="reunion-cards-track">
               {testimonials
                 .slice(carouselStart, carouselStart + cardsPerPage)
-                .map((t, idx) => {
-                  const ai = (t as any).avatarIndex ?? idx % 3;
-                  const positions = ['0% center', '50% center', '100% center'];
-                  return (
+                .map((t, idx) => (
                     <div className="reunion-card" key={`${carouselStart}-${idx}`}>
                       <div className="reunion-quote-mark">&ldquo;</div>
                       <p className="reunion-text">{t.text}</p>
                       <div className="reunion-author-row">
                         <div className="reunion-avatar-wrap">
-                          {t.avatarUrl ? (
-                            <img
-                              src={t.avatarUrl}
-                              alt={t.name}
-                              className="reunion-avatar-img"
-                              style={{ objectFit: 'cover', width: '100%', maxWidth: '100%' }}
-                            />
-                          ) : (
-                            <img
-                              src={testimonialsAvatarSprite}
-                              alt={t.name}
-                              className="reunion-avatar-img"
-                              style={{ objectPosition: positions[ai] }}
-                            />
-                          )}
+                          <img
+                            src={t.avatarUrl}
+                            alt={t.name}
+                            className="reunion-avatar-img"
+                            loading="lazy"
+                          />
                         </div>
                         <div className="reunion-author-info">
                           <strong className="reunion-name">– {t.name}</strong>
@@ -1217,8 +1208,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  )
+                )}
             </div>
 
             {/* Next Arrow */}
@@ -1234,7 +1225,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         )}
 
         {/* FOOTER */}
-        <footer className="landing-footer">
+        <footer className="landing-footer" id="about">
           <div className="footer-container">
             <div className="footer-top-grid">
               {/* Brand Info Column */}
@@ -1245,6 +1236,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                   </div>
                   <span className="footer-logo-text">FIND<span>IT</span></span>
                 </div>
+                <h4 className="footer-about-title">About Us</h4>
                 <p className="footer-brand-desc">
                   FindIT is a next-generation AI-powered lost and found ecosystem dedicated to reconnecting people with their missing valuables. By pairing real-time computer vision analysis with geo-fenced community reporting, FindIT delivers rapid, privacy-first item recovery across Nepal.
                 </p>
