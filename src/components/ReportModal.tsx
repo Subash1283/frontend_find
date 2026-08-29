@@ -198,7 +198,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         }
 
         if (populated) {
-          showToast('⚡ Form auto-filled with AI!', 'success');
+          showToast('Form auto-filled with AI!', 'success');
         } else if (data.title || data.description) {
            showToast('AI analysis complete (kept your existing fields)', 'info');
         }

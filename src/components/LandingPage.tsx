@@ -3,10 +3,9 @@ import '../styles/premium-landing.css';
 import { SuspendedAccountModal, parseSuspensionReason } from './SuspendedAccountModal';
 import { validateEmailAuthenticity, getEmailDomainSuggestions } from '../utils/emailValidation';
 
-import headphonesImg from '../assets/beige_headphones.png';
-import walletImg from '../assets/brown_wallet.png';
 
 import catElectronicsImg from '../assets/category_electronics.png';
+
 import dummyWallet from '../assets/dummy_wallet.jpg';
 import dummyIphone from '../assets/dummy_iphone.jpg';
 import dummyBackpack from '../assets/dummy_backpack.jpg';
@@ -28,6 +27,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [infoModalContent, setInfoModalContent] = useState<{title: string, body: string} | null>(null);
   const [successDialogContent, setSuccessDialogContent] = useState<{title: string, message: string} | null>(null);
   const [suspendedDialog, setSuspendedDialog] = useState<{ reason: string } | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('findit_dark_mode') === 'true');
   // Login fields
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -117,6 +117,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   // Data for advanced features
   const [platformReviews, setPlatformReviews] = useState<any[]>([]);
   const [allItems, setAllItems]               = useState<any[]>([]);
+
+  // Dark mode effect
+  useEffect(() => {
+    const root = document.querySelector('.premium-landing-body');
+    if (root) {
+      root.classList.toggle('dark-mode', isDarkMode);
+    }
+    localStorage.setItem('findit_dark_mode', String(isDarkMode));
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode(prev => !prev);
 
 
   useEffect(() => {
@@ -933,6 +944,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
           <a href="#about">About Us</a>
         </nav>
         <div className="landing-nav-actions">
+          <button className="dark-mode-toggle" onClick={toggleDarkMode} title={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
+            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+          </button>
           <button className="nav-btn-login" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}>Log In</button>
           <button className="nav-btn-signup" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('register'); }}>Sign Up</button>
         </div>
@@ -1000,10 +1014,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
               <img src={catElectronicsImg} alt="Electronics" />
             </div>
             <div className="card-item headphones-card">
-              <img src={headphonesImg} alt="Beige Headphones" />
+              <img src={dummyKeys} alt="Keys" />
             </div>
             <div className="card-item wallet-card">
-              <img src={walletImg} alt="Brown Wallet" />
+              <img src={dummyWallet} alt="Wallet" />
             </div>
             <div className="match-card">
               <div className="match-icon"><i className="fas fa-check-circle"></i></div>
@@ -1013,7 +1027,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                 <button className="match-btn" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}>View Details</button>
               </div>
             </div>
-            <div className="decor-dots"></div>
+
           </div>
         </div>
 

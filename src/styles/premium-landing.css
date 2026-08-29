@@ -162,7 +162,6 @@ input {
 /* ==========================================================================
    BACKGROUND EFFECTS — MODERN ABSTRACT TECH GLOW
    ========================================================================== */
-
 .premium-bg-backdrop-image {
   position: absolute;
   top: 0;
@@ -170,12 +169,26 @@ input {
   width: 100%;
   height: 1080px;
   background-image:
-    radial-gradient(ellipse at 50% 15%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.78) 55%, #ffffff 100%),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.85) 65%, #ffffff 100%),
+    /* Bottom fade to white so content below is readable */
+    linear-gradient(to bottom,
+      transparent 0%,
+      transparent 40%,
+      rgba(255, 255, 255, 0.6) 70%,
+      #ffffff 100%),
+    /* Subtle blue brand tint overlay */
+    linear-gradient(135deg,
+      rgba(37, 99, 235, 0.08) 0%,
+      rgba(99, 102, 241, 0.06) 50%,
+      transparent 100%),
+    /* Soft warm light leak top-left */
+    radial-gradient(ellipse at 15% 10%,
+      rgba(255, 255, 255, 0.45) 0%,
+      transparent 55%),
     url('/landing-hero.jpg');
   background-size: cover;
-  background-position: center 15%;
+  background-position: center 30%;
   background-repeat: no-repeat;
+  filter: brightness(1.08) contrast(1.06) saturate(1.1);
   pointer-events: none;
   z-index: 0;
 }
@@ -618,10 +631,12 @@ input {
 
   margin: 0 0 2.5rem;
 
-  color: #64748b;
+  color: #475569 !important;
 
   font-size:
     clamp(1rem, 2.5vw, 1.12rem);
+
+  font-weight: 450;
 
   line-height: 1.7;
 }
@@ -678,16 +693,19 @@ input {
 }
 
 .hero-feature-text strong {
-  color: #1e293b;
+  color: #0f172a;
 
   font-size: 0.92rem;
-  font-weight: 650;
+  font-weight: 700;
 }
 
-.hero-feature-text span {
+.hero-feature-text span,
+.hero-feature-text span a,
+.hero-feature-text a {
   margin-top: 2px;
 
-  color: #64748b;
+  color: #0f172a;
+  text-decoration: none;
 
   font-size: 0.82rem;
 }
@@ -940,20 +958,69 @@ input {
 .premium-btn-primary {
   border: 1px solid #2563eb;
 
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #2563eb 100%);
+  background-size: 200% 200%;
   color: #ffffff;
 
   box-shadow:
-    0 6px 18px rgba(37, 99, 235, 0.16);
+    0 6px 18px rgba(37, 99, 235, 0.25),
+    0 0 20px rgba(37, 99, 235, 0.15);
+
+  animation: btnGlow 3s ease-in-out infinite, btnShimmer 4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: btnSweep 5s ease-in-out infinite;
+}
+
+@keyframes btnGlow {
+  0%, 100% {
+    box-shadow:
+      0 6px 18px rgba(37, 99, 235, 0.25),
+      0 0 20px rgba(37, 99, 235, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 8px 28px rgba(37, 99, 235, 0.35),
+      0 0 40px rgba(37, 99, 235, 0.2),
+      0 0 60px rgba(59, 130, 246, 0.1);
+  }
+}
+
+@keyframes btnShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes btnSweep {
+  0%, 75% { left: -60%; }
+  100% { left: 120%; }
 }
 
 .premium-btn-primary:hover {
-  background: #1d4ed8;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #1d4ed8 100%);
+  background-size: 200% 200%;
 
   transform: translateY(-2px);
 
   box-shadow:
-    0 10px 24px rgba(37, 99, 235, 0.22);
+    0 10px 30px rgba(37, 99, 235, 0.35),
+    0 0 40px rgba(37, 99, 235, 0.2);
 }
 
 .premium-btn-secondary {
@@ -3633,3 +3700,690 @@ input {
     font-size: 1.3rem;
   }
 }
+
+
+/* ==========================================================================
+   DARK MODE TOGGLE
+   ========================================================================== */
+
+.dark-mode-toggle {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+
+  background: #f8fafc;
+  color: #475569;
+
+  font-size: 0.95rem;
+
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+}
+
+.dark-mode-toggle:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+  transform: rotate(20deg);
+}
+
+
+/* ==========================================================================
+   HERO SEARCH BAR
+   ========================================================================== */
+
+.hero-search-bar {
+  width: 100%;
+  max-width: 480px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 0;
+
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+
+  padding: 5px 5px 5px 18px;
+
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid #e2e8f0;
+  border-radius: 100px;
+
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+
+  transition: all 0.3s ease;
+}
+
+.hero-search-bar:focus-within {
+  border-color: #93c5fd;
+  box-shadow:
+    0 4px 20px rgba(15, 23, 42, 0.06),
+    0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.hero-search-icon {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.hero-search-bar input {
+  flex: 1;
+
+  padding: 10px 14px;
+
+  border: none;
+  outline: none;
+  background: transparent;
+
+  color: #1e293b;
+
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+
+.hero-search-bar input::placeholder {
+  color: #94a3b8;
+}
+
+.hero-search-btn {
+  padding: 10px 22px;
+
+  border: none;
+  border-radius: 100px;
+
+  background: #2563eb;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background 0.25s ease;
+
+  flex-shrink: 0;
+}
+
+.hero-search-btn:hover {
+  background: #1d4ed8;
+}
+
+
+/* ==========================================================================
+   DARK MODE THEME
+   ========================================================================== */
+
+.premium-landing-body.dark-mode {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Header dark mode */
+.dark-mode .landing-header {
+  background: rgba(15, 23, 42, 0.92) !important;
+  border-bottom-color: rgba(51, 65, 85, 0.5) !important;
+}
+
+.dark-mode .landing-logo span {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .landing-nav a {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .landing-nav a:hover {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .nav-btn-login {
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .dark-mode-toggle {
+  background: #1e293b;
+  border-color: #334155;
+  color: #fbbf24;
+}
+
+.dark-mode .dark-mode-toggle:hover {
+  background: #334155;
+  color: #fcd34d;
+}
+
+/* Hero dark mode */
+.dark-mode .premium-bg-backdrop-image {
+  filter: brightness(0.35) contrast(1.1) saturate(0.7) !important;
+}
+
+.dark-mode .premium-hero-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .premium-text-gradient {
+  background: linear-gradient(135deg, #60a5fa, #93c5fd, #3b82f6) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.dark-mode .premium-hero-subtitle {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .hero-badge-premium {
+  background: rgba(30, 58, 138, 0.3) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  color: #60a5fa !important;
+}
+
+.dark-mode .hero-feature-icon {
+  background: rgba(37, 99, 235, 0.15) !important;
+  color: #60a5fa !important;
+}
+
+.dark-mode .hero-feature-text strong {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .hero-feature-text span,
+.dark-mode .hero-feature-text span a,
+.dark-mode .hero-feature-text a {
+  color: #94a3b8 !important;
+}
+
+/* Search bar dark mode */
+.dark-mode .hero-search-bar {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: #334155;
+}
+
+.dark-mode .hero-search-bar:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.dark-mode .hero-search-bar input {
+  color: #e2e8f0;
+}
+
+.dark-mode .hero-search-bar input::placeholder {
+  color: #64748b;
+}
+
+/* Cards dark mode */
+.dark-mode .card-item {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .match-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .match-info strong {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .match-info span {
+  color: #94a3b8 !important;
+}
+
+/* Buttons dark mode */
+.dark-mode .premium-btn-secondary {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .premium-btn-secondary:hover {
+  background: #334155 !important;
+  border-color: #475569 !important;
+}
+
+/* Stats section dark mode */
+
+.dark-mode .premium-stat-card {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .premium-stat-num {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .premium-stat-label {
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .premium-stat-sub {
+  color: #64748b !important;
+}
+
+/* Sections dark mode */
+.dark-mode .browse-categories-section,
+.dark-mode .how-it-works-section,
+.dark-mode .recently-found-section,
+.dark-mode .safety-section,
+.dark-mode .about-section,
+.dark-mode .landing-footer {
+  background: #0f172a !important;
+}
+
+.dark-mode .browse-cat-title,
+.dark-mode .how-section-title,
+.dark-mode .recently-found-title,
+.dark-mode .safety-title,
+.dark-mode .about-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .browse-cat-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .browse-cat-label {
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .browse-cat-count {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .how-step-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .how-step-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .how-step-desc {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .found-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .found-card-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .found-card-location {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .found-card-time {
+  color: #64748b !important;
+}
+
+/* Footer dark mode */
+.dark-mode .landing-footer {
+  border-top-color: #1e293b !important;
+}
+
+.dark-mode .footer-logo-text {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .footer-heading {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .footer-link {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .footer-bottom {
+  color: #64748b !important;
+  border-top-color: #1e293b !important;
+}
+
+/* Testimonials dark mode */
+.dark-mode .testimonial-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .testimonial-card:hover {
+  border-color: #475569 !important;
+}
+
+.dark-mode .testimonial-text {
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .testimonial-author-block strong {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .testimonial-author-block span {
+  color: #64748b !important;
+}
+
+.dark-mode .testimonial-section-header,
+.dark-mode .testimonial-section-subtitle {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .testimonial-nav-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .testimonial-nav-btn:hover {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Happy Reunions dark mode */
+.dark-mode .happy-reunions-section {
+  background: #0f172a !important;
+}
+
+.dark-mode .happy-reunions-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .happy-reunions-line {
+  background: #334155 !important;
+}
+
+.dark-mode .reunion-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .reunion-card:hover {
+  border-color: #475569 !important;
+}
+
+.dark-mode .reunion-arrow {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .reunion-arrow:hover {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Premium sections dark mode */
+.dark-mode .premium-section {
+  background: #0f172a !important;
+}
+
+.dark-mode .premium-section-title {
+  color: #f1f5f9 !important;
+}
+
+/* How it works dark mode */
+.dark-mode .how-works-section {
+  background: #0f172a !important;
+}
+
+/* Recently found dark mode */
+.dark-mode .recently-found-section {
+  background: #0f172a !important;
+}
+
+/* Gradient dividers in dark mode */
+.dark-mode .gradient-divider,
+.dark-mode .section-divider {
+  opacity: 0.2 !important;
+}
+
+/* Left gradient overlay for dark mode hero */
+.dark-mode .premium-bg-backdrop-image {
+  background-image:
+    linear-gradient(to right,
+      #0f172a 0%,
+      #0f172a 25%,
+      rgba(15, 23, 42, 0.85) 45%,
+      rgba(15, 23, 42, 0.3) 65%,
+      transparent 100%),
+    linear-gradient(to bottom,
+      transparent 0%,
+      transparent 40%,
+      rgba(15, 23, 42, 0.8) 75%,
+      #0f172a 100%),
+    linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
+    url('/landing-hero.jpg') !important;
+  filter: none !important;
+}
+
+/* Gateway screen dark mode */
+.dark-mode .gateway-screen {
+  background: #0f172a !important;
+}
+
+.dark-mode .gateway-logo {
+  color: #f1f5f9 !important;
+}
+
+/* Login modal dark mode */
+.dark-mode .landing-modal-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+}
+
+.dark-mode .landing-modal {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .modal-tab {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .modal-tab.active {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .modal-input {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .modal-input::placeholder {
+  color: #64748b !important;
+}
+
+/* ---- Browse Categories chips dark mode ---- */
+.dark-mode .browse-cat-chip {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .browse-cat-chip:hover {
+  border-color: #475569 !important;
+}
+
+.dark-mode .browse-cat-label {
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .browse-cat-count {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .browse-cat-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .browse-cat-viewall {
+  color: #60a5fa !important;
+}
+
+/* ---- How FindIt Works dark mode ---- */
+.dark-mode .how-works-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .how-works-line {
+  background: linear-gradient(90deg, transparent, #475569, transparent) !important;
+}
+
+.dark-mode .how-works-step-num {
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .how-works-step-desc {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .how-works-arrow {
+  color: #475569 !important;
+}
+
+.dark-mode .how-works-icon-circle {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ---- Reunion / Testimonial cards dark mode ---- */
+.dark-mode .happy-reunions-section {
+  background: #0f172a !important;
+}
+
+.dark-mode .happy-reunions-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .happy-reunions-line {
+  background: linear-gradient(90deg, transparent, #475569, transparent) !important;
+}
+
+.dark-mode .reunion-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .reunion-card:hover {
+  border-color: #475569 !important;
+}
+
+.dark-mode .reunion-quote-mark {
+  color: #475569 !important;
+}
+
+.dark-mode .reunion-text {
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .reunion-name {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .reunion-author-row {
+  border-top-color: #334155 !important;
+}
+
+.dark-mode .reunion-avatar-wrap {
+  border-color: #475569 !important;
+}
+
+.dark-mode .reunion-arrow {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .reunion-arrow:hover {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* ---- Recently Found cards dark mode ---- */
+.dark-mode .recently-found-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .recently-found-viewall {
+  color: #60a5fa !important;
+}
+
+.dark-mode .found-item-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .found-item-card:hover {
+  border-color: #475569 !important;
+}
+
+.dark-mode .found-item-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .found-item-location {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .found-item-time {
+  color: #64748b !important;
+}
+
+/* ---- Safety section dark mode ---- */
+.dark-mode .safety-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .safety-card-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .safety-card-desc {
+  color: #94a3b8 !important;
+}
+
+/* ---- About section dark mode ---- */
+.dark-mode .about-desc {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .about-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark-mode .about-card-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .about-card-desc {
+  color: #94a3b8 !important;
+}
+
+/* ---- Generic premium section dark mode ---- */
+.dark-mode .premium-section {
+  background: #0f172a !important;
+}
+
+.dark-mode .premium-section-title {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .premium-section-desc {
+  color: #94a3b8 !important;
+}
+
