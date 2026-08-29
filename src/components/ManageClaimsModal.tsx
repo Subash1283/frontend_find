@@ -30,7 +30,35 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
   const [claims, setClaims] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+    // Added revocation state
+    const [revokeAction, setRevokeAction] = useState<null | { requestId: number; userName: string }>(null);
+
+    const revokeClaim = async (requestId: number) => {
+      setIsProcessing(true);
+      try {
+        const res = await fetch(`${apiBase}/items/claim-requests/${requestId}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'REVOKED' }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Claim revoked successfully', 'success');
+          fetchClaims();
+        } else {
+          showToast(data.message || 'Failed to revoke claim', 'error');
+        }
+      } catch {
+        showToast('Error revoking claim', 'error');
+      } finally {
+        setIsProcessing(false);
+        setRevokeAction(null);
+      }
+    };
+
 
   useEffect(() => {
     fetchClaims();
@@ -205,37 +233,30 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
                       </div>
                     )}
                     {claim.status === 'APPROVED' && claim.verificationCode && (
-                       <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px dashed #34d399', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                         <div>
-                           <span style={{ fontSize: '0.8rem', color: '#065f46', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Verification Code</span>
-                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                             <strong style={{ fontSize: '1.25rem', color: '#2563eb', fontFamily: 'monospace', letterSpacing: '2px', backgroundColor: '#ffffff', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>{claim.verificationCode}</strong>
-                             <button
-                               type="button"
-                               onClick={() => {
-                                 navigator.clipboard.writeText(claim.verificationCode);
-                                 showToast(`Copied ${claim.verificationCode} to clipboard!`, 'success');
-                               }}
-                               style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: '#059669', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                               title="Copy code"
-                             >
-                               <i className="fas fa-copy"></i> Copy
-                             </button>
-                           </div>
-                         </div>
-                         {onOpenChat && (
-                           <button
-                             className="btn-primary"
-                             style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }}
-                             onClick={() => {
-                               onOpenChat(itemId, `Chat about ${itemTitle || 'Item'}`, claim.userId);
-                               onClose();
-                             }}
-                           >
-                             <i className="fas fa-comments"></i> Chat with Claimant
-                           </button>
-                         )}
-                       </div>
+                      <>
+                        <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px dashed #34d399', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                          <div>
+                            <span style={{ fontSize: '0.8rem', color: '#065f46', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Verification Code</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <strong style={{ fontSize: '1.25rem', color: '#2563eb', fontFamily: 'monospace', letterSpacing: '2px', backgroundColor: '#ffffff', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>{claim.verificationCode}</strong>
+                              <button type="button" onClick={() => {
+                                navigator.clipboard.writeText(claim.verificationCode);
+                                showToast(`Copied ${claim.verificationCode} to clipboard!`, 'success');
+                              }} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: '#059669', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Copy code">
+                                <i className="fas fa-copy"></i> Copy
+                              </button>
+                            </div>
+                          </div>
+                          {onOpenChat && (
+                            <button className="btn-primary" style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }} onClick={() => { onOpenChat(itemId, `Chat about ${itemTitle || 'Item'}`, claim.userId); onClose(); }}>
+                              <i className="fas fa-comments"></i> Chat with Claimant
+                            </button>
+                          )}
+                          <button onClick={() => setRevokeAction({ requestId: claim.id, userName: claim.user?.name || 'this user' })} disabled={isProcessing} style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.78rem', background: '#f87171', border: 'none', color: '#fff', cursor: isProcessing ? 'not-allowed' : 'pointer' }}>
+                            Revoke Claim
+                          </button>
+                        </div>
+                      </>
                     )}
                   </div>
                 ))}

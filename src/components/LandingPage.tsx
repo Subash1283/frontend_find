@@ -115,16 +115,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const defaultTestimonials = [
     {
       name: 'john doe',
+      role: 'user',
       text: 'Found my lost wallet in 2 hours. The location feature is really useful.',
     },
     {
       name: 'josh',
-   
+      role: 'user',
       text: 'Got my laptop back through community help. This platform is very reliable.',
     },
     {
       name: 'Sita Rai',
-      
+      role: 'user',
       text: 'The verification system gave me a lot of confidence to safely return items.',
     },
   ];
