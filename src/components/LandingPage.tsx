@@ -1211,9 +1211,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                         </div>
                         <div className="reunion-author-info">
                           <strong className="reunion-name">– {t.name}</strong>
-                          <span className="reunion-location">
-                            {(t as any).location || 'Nepal'}
-                          </span>
                         </div>
                         <div className="reunion-stars">
                           {'★'.repeat((t as any).rating ?? 5)}

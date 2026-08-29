@@ -3225,9 +3225,9 @@ input {
 
 .happy-reunions-section {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
-  padding: 3.5rem 1rem 4rem;
+  padding: 4rem 1rem 4.5rem;
 }
 
 /* Centred title row with flanking lines */
@@ -3236,18 +3236,18 @@ input {
   align-items: center;
   justify-content: center;
   gap: 1.25rem;
-  margin-bottom: 2.75rem;
+  margin-bottom: 3rem;
 }
 
 .happy-reunions-line {
   flex: 1;
-  max-width: 120px;
+  max-width: 140px;
   height: 1.5px;
   background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
 }
 
 .happy-reunions-title {
-  font-size: 1.85rem;
+  font-size: 2.1rem;
   font-weight: 700;
   color: #1e293b;
   white-space: nowrap;
@@ -3258,26 +3258,26 @@ input {
 .happy-reunions-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 /* Arrow buttons */
 .reunion-arrow {
   flex-shrink: 0;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1.5px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
-  box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+  box-shadow: 0 3px 10px rgba(15,23,42,0.06);
 }
 
 .reunion-arrow:hover {
@@ -3292,26 +3292,29 @@ input {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
-/* Individual testimonial card */
+/* Individual testimonial card - Larger dimensions & padding */
 .reunion-card {
   background: #ffffff;
   border: 1px solid #e8edf3;
-  border-radius: 18px;
-  padding: 1.75rem 1.5rem 1.5rem;
-  box-shadow: 0 2px 12px rgba(15,23,42,0.06);
+  border-radius: 22px;
+  padding: 2.25rem 1.85rem 1.85rem;
+  min-height: 275px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.05);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   animation: reunionCardIn 0.35s ease both;
 }
 
 .reunion-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(15,23,42,0.10);
+  transform: translateY(-6px);
+  border-color: #cbd5e1;
+  box-shadow: 0 16px 36px rgba(15,23,42,0.09);
 }
 
 @keyframes reunionCardIn {
@@ -3321,18 +3324,18 @@ input {
 
 /* Big quotation mark */
 .reunion-quote-mark {
-  font-size: 3rem;
+  font-size: 3.5rem;
   line-height: 1;
   color: #cbd5e1;
   font-family: Georgia, serif;
-  margin-bottom: -0.5rem;
+  margin-bottom: -0.75rem;
 }
 
 /* Testimonial body text */
 .reunion-text {
-  font-size: 0.95rem;
-  line-height: 1.65;
-  color: #475569;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #334155;
   flex: 1;
 }
 
@@ -3340,14 +3343,16 @@ input {
 .reunion-author-row {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
 }
 
-/* Circular avatar clipped from the sprite */
+/* Circular avatar */
 .reunion-avatar-wrap {
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -3361,7 +3366,7 @@ input {
   display: block;
 }
 
-/* Name & location */
+/* Name */
 .reunion-author-info {
   display: flex;
   flex-direction: column;
@@ -3371,21 +3376,16 @@ input {
 }
 
 .reunion-name {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.reunion-location {
-  font-size: 0.78rem;
-  color: #94a3b8;
+  font-size: 1rem;
+  font-weight: 750;
+  color: #0f172a;
 }
 
 /* Gold star rating */
 .reunion-stars {
   color: #f59e0b;
-  font-size: 0.95rem;
-  letter-spacing: 1px;
+  font-size: 1.05rem;
+  letter-spacing: 1.5px;
   flex-shrink: 0;
 }
 
