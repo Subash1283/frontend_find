@@ -55,6 +55,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [resendTimer, setResendTimer] = useState(60);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
 
   // OTP inputs state
@@ -269,6 +270,147 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     // Cleanup timer on unmount
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  // Interactive AI Network Constellation Background Canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = 1100);
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = 1100;
+    };
+    window.addEventListener('resize', handleResize);
+
+    const mouse = { x: -1000, y: -1000, radius: 130 };
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    };
+    const handleMouseLeave = () => {
+      mouse.x = -1000;
+      mouse.y = -1000;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
+
+    const particleCount = Math.min(Math.floor(width / 26), 55);
+    const colors = [
+      'rgba(37, 99, 235, 0.7)',   // Sapphire Blue
+      'rgba(6, 182, 212, 0.7)',   // Cyan
+      'rgba(99, 102, 241, 0.65)',  // Indigo
+      'rgba(16, 185, 129, 0.65)', // Emerald
+    ];
+
+    const particles = Array.from({ length: particleCount }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.6,
+      radius: Math.random() * 2 + 1.2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      pulse: Math.random() * Math.PI,
+      pulseSpeed: 0.02 + Math.random() * 0.02,
+    }));
+
+    const waves: { x: number; y: number; radius: number; maxRadius: number; opacity: number }[] = [];
+    let frame = 0;
+
+    const animate = () => {
+      frame++;
+      ctx.clearRect(0, 0, width, height);
+
+      // Trigger occasional AI radar pulse wave
+      if (frame % 140 === 0 && particles.length > 0) {
+        const p = particles[Math.floor(Math.random() * particles.length)];
+        waves.push({ x: p.x, y: p.y, radius: 2, maxRadius: 70, opacity: 0.55 });
+      }
+
+      // Draw radar ping waves
+      for (let i = waves.length - 1; i >= 0; i--) {
+        const w = waves[i];
+        w.radius += 0.75;
+        w.opacity -= 0.007;
+        if (w.opacity <= 0 || w.radius >= w.maxRadius) {
+          waves.splice(i, 1);
+          continue;
+        }
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(37, 99, 235, ${w.opacity})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Update and draw particles
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.pulse += p.pulseSpeed;
+
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        // Interactive elastic cursor repulsion
+        const dx = mouse.x - p.x;
+        const dy = mouse.y - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < mouse.radius && dist > 0) {
+          const force = (mouse.radius - dist) / mouse.radius;
+          p.x -= (dx / dist) * force * 2.2;
+          p.y -= (dy / dist) * force * 2.2;
+        }
+
+        // Draw connections
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const cdx = p.x - p2.x;
+          const cdy = p.y - p2.y;
+          const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+
+          if (cdist < 130) {
+            const alpha = (1 - cdist / 130) * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(37, 99, 235, ${alpha})`;
+            ctx.lineWidth = 0.85;
+            ctx.stroke();
+          }
+        }
+
+        // Draw glowing particle node
+        const currentRadius = p.radius + Math.sin(p.pulse) * 0.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.6, currentRadius), 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = p.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      animId = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, []);
 
@@ -903,8 +1045,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   return (
     <div className="premium-landing-body">
       {/* BACKGROUND ELEMENTS */}
+      <div className="premium-bg-backdrop-image"></div>
+      <canvas ref={canvasRef} className="premium-ai-network-canvas" />
       <div className="premium-bg-grid"></div>
       <div className="premium-ambient-light"></div>
+      <div className="premium-ambient-orb orb-1"></div>
+      <div className="premium-ambient-orb orb-2"></div>
+      <div className="premium-ambient-orb orb-3"></div>
+      <div className="premium-tech-radar">
+        <div className="radar-circle rc-1"></div>
+        <div className="radar-circle rc-2"></div>
+        <div className="radar-circle rc-3"></div>
+      </div>
 
       {/* GATEWAY ENTRY SCREEN */}
       <div className={`gateway-screen ${hasEntered ? 'entered' : ''}`} style={hasEntered ? { display: 'none' } : {}}>
