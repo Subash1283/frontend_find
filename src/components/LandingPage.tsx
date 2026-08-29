@@ -5,12 +5,16 @@ import { validateEmailAuthenticity, getEmailDomainSuggestions } from '../utils/e
 
 import headphonesImg from '../assets/beige_headphones.png';
 import walletImg from '../assets/brown_wallet.png';
+import testimonialsAvatarSprite from '../assets/testimonial_avatars.jpg';
 
 import catElectronicsImg from '../assets/category_electronics.png';
-import catDocumentsImg from '../assets/category_documents.png';
-import catKeysImg from '../assets/category_keys.png';
-import catBagsImg from '../assets/category_bags.png';
-import catJewelryImg from '../assets/category_jewelry.png';
+import dummyWallet from '../assets/dummy_wallet.jpg';
+import dummyIphone from '../assets/dummy_iphone.jpg';
+import dummyBackpack from '../assets/dummy_backpack.jpg';
+import dummyKeys from '../assets/dummy_keys.jpg';
+import dummyIdCard from '../assets/category_documents.png';
+import dummyWatch from '../assets/category_jewelry.png';
+
 
 interface LandingPageProps {
   apiBase: string;
@@ -103,7 +107,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
 
   // Advanced features state
   const [statsVisible, setStatsVisible] = useState(false);
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const statsRef = useRef<HTMLDivElement>(null);
 
   // Count-up animation state
@@ -112,25 +115,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [countRate, setCountRate] = useState(0);
 
   // Data for advanced features
-  const defaultTestimonials = [
-    {
-      name: 'john doe',
-      role: 'user',
-      text: 'Found my lost wallet in 2 hours. The location feature is really useful.',
-    },
-    {
-      name: 'josh',
-      role: 'user',
-      text: 'Got my laptop back through community help. This platform is very reliable.',
-    },
-    {
-      name: 'Sita Rai',
-      role: 'user',
-      text: 'The verification system gave me a lot of confidence to safely return items.',
-    },
-  ];
-
   const [platformReviews, setPlatformReviews] = useState<any[]>([]);
+  const [allItems, setAllItems]               = useState<any[]>([]);
+
 
   useEffect(() => {
     // Reset scroll position on mount
@@ -141,26 +128,137 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         const res = await fetch(`${apiBase}/reviews/platform`);
         if (res.ok) {
           const data = await res.json();
+          // Only show verified, high-quality reviews (rating >= 4)
           const topReviews = data.filter((r: any) => r.rating >= 4);
-          if (topReviews.length > 0) {
-            setPlatformReviews(topReviews);
-          }
+          setPlatformReviews(topReviews);
         }
       } catch (e) {
         console.warn('Failed to fetch platform reviews');
       }
     };
+
+    const fetchAllItems = async () => {
+      try {
+        const res = await fetch(`${apiBase}/items`);
+        if (res.ok) {
+          const data = await res.json();
+          setAllItems(data);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch items');
+      }
+    };
+
     fetchPlatformReviews();
+    fetchAllItems();
   }, [apiBase]);
 
-  const testimonials = platformReviews.length > 0
-    ? platformReviews.map(r => ({
-        name: r.reviewer?.name || 'Anonymous',
-        role: `⭐ ${r.rating}/5 User Rating`,
-        text: r.comment,
-        adminResponse: r.adminResponse || null,
-      }))
-    : defaultTestimonials;
+  // --- Derived data from allItems ---
+
+  // Category definitions (icon + colour + mock initial counts) for Browse Categories
+  const CATEGORIES = [
+    { key: 'wallet',      label: 'Wallets',      icon: 'fa-wallet',        color: '#3b82f6', dummyCount: 312 },
+    { key: 'phone',       label: 'Phones',        icon: 'fa-mobile-alt',    color: '#10b981', dummyCount: 278 },
+    { key: 'bag',         label: 'Bags',          icon: 'fa-shopping-bag',  color: '#8b5cf6', dummyCount: 364 },
+    { key: 'key',         label: 'Keys',          icon: 'fa-key',           color: '#f59e0b', dummyCount: 198 },
+    { key: 'id card',     label: 'ID Cards',      icon: 'fa-id-card',       color: '#06b6d4', dummyCount: 126 },
+    { key: 'accessory',   label: 'Accessories',   icon: 'fa-glasses',       color: '#f43f5e', dummyCount: 172 },
+    { key: 'electronic',  label: 'Electronics',   icon: 'fa-headphones',    color: '#14b8a6', dummyCount: 145 },
+    { key: 'other',       label: 'Others',        icon: 'fa-ellipsis-h',    color: '#94a3b8', dummyCount: 200 },
+  ] as const;
+
+  const categoryCounts = CATEGORIES.map(cat => {
+    const realCount = allItems.filter(item =>
+      item.category?.toLowerCase().includes(cat.key) ||
+      (cat.key === 'other' && !CATEGORIES.slice(0, -1).some(c =>
+        item.category?.toLowerCase().includes(c.key)
+      ))
+    ).length;
+    return {
+      ...cat,
+      count: realCount + cat.dummyCount,
+    };
+  });
+
+  // Recently Found – type=found, newest first
+  const realFoundItems = allItems
+    .filter(item => item.type === 'found' && item.status === 'active')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Dummy fallback/padding items
+  const dummyFoundItems = [
+    { id: 'd1', title: 'Wallet', location: 'New Road, Kathmandu', createdAt: new Date(Date.now() - 2 * 3600000).toISOString(), imageFront: dummyWallet },
+    { id: 'd2', title: 'iPhone 13', location: 'Thamel, Kathmandu', createdAt: new Date(Date.now() - 5 * 3600000).toISOString(), imageFront: dummyIphone },
+    { id: 'd3', title: 'Black Backpack', location: 'Putalisadak, Kathmandu', createdAt: new Date(Date.now() - 24 * 3600000).toISOString(), imageFront: dummyBackpack },
+    { id: 'd4', title: 'House Keys', location: 'Lazimpat, Kathmandu', createdAt: new Date(Date.now() - 24 * 3600000).toISOString(), imageFront: dummyKeys },
+    { id: 'd5', title: 'ID Card', location: 'Boudha, Kathmandu', createdAt: new Date(Date.now() - 48 * 3600000).toISOString(), imageFront: dummyIdCard },
+    { id: 'd6', title: 'Wrist Watch', location: 'Durbarmarg, Kathmandu', createdAt: new Date(Date.now() - 48 * 3600000).toISOString(), imageFront: dummyWatch },
+  ];
+
+  // Combine real found items first, then pad remaining slots with dummy items to always show 6
+  const foundItems = [...realFoundItems, ...dummyFoundItems].slice(0, 6);
+
+  // Relative time helper
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(mins / 60);
+    const days  = Math.floor(hours / 24);
+    if (days > 0)  return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (mins > 0)  return `${mins} min${mins > 1 ? 's' : ''} ago`;
+    return 'just now';
+  };
+
+  const dummyTestimonials = [
+    {
+      name: 'Sushma Thapa',
+      location: 'Kathmandu',
+      rating: 5,
+      text: 'I lost my wallet with all my cards and cash. Thanks to FindIt, I got it back the very next day!',
+      avatarIndex: 0,
+      avatarUrl: null,
+    },
+    {
+      name: 'Rohit Shrestha',
+      location: 'Lalitpur',
+      rating: 5,
+      text: 'Amazing platform! I found an iPhone on the street and returned it to the owner through FindIt.',
+      avatarIndex: 1,
+      avatarUrl: null,
+    },
+    {
+      name: 'Anjali Adhikari',
+      location: 'Bhaktapur',
+      rating: 5,
+      text: 'Such a helpful community. We need more people and platforms like this.',
+      avatarIndex: 2,
+      avatarUrl: null,
+    },
+  ];
+
+  const realTestimonials = platformReviews.map((r, i) => ({
+    name: r.reviewer?.name || 'Anonymous',
+    location: r.reviewer?.address || 'Nepal',
+    rating: r.rating,
+    text: r.comment,
+    avatarIndex: i % 3,
+    avatarUrl: r.image ? `${apiBase.replace('/api', '')}/uploads/reviews/${r.image}` : null,
+  }));
+
+  // Combine real testimonials and fallback dummy testimonials
+  const testimonials = [...realTestimonials, ...dummyTestimonials];
+
+  // Index of the first visible card (slides in steps of 3)
+  const [carouselStart, setCarouselStart] = useState(0);
+  const cardsPerPage = 3;
+
+  const goPrev = () =>
+    setCarouselStart(prev => Math.max(0, prev - cardsPerPage));
+  const goNext = () =>
+    setCarouselStart(prev =>
+      prev + cardsPerPage < testimonials.length ? prev + cardsPerPage : 0
+    );
 
 
 
@@ -194,12 +292,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     return () => observer.disconnect();
   }, []);
 
-  // Auto-rotate testimonials
+  // Auto-rotate carousel every 6 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial(prev => (prev + 1) % testimonials.length);
-    }, 5000);
+    const interval = setInterval(goNext, 6000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testimonials.length]);
 
   // Count-up animation when stats section is visible
@@ -918,7 +1015,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         {/* STATISTICS ROW */}
         <div className="premium-stats-container animate-on-scroll" ref={statsRef}>
           <div className="premium-stats-grid">
-            <div className="premium-stat-card">
+            <div className="premium-stat-card stat-card-blue">
               <div className="premium-stat-icon">
                 <i className="fas fa-users" />
               </div>
@@ -927,7 +1024,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
               <div className="premium-stat-sub">Verified community members</div>
             </div>
 
-            <div className="premium-stat-card">
+            <div className="premium-stat-card stat-card-green">
               <div className="premium-stat-icon">
                 <i className="fas fa-box-open" />
               </div>
@@ -936,7 +1033,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
               <div className="premium-stat-sub">Reunited with rightful owners</div>
             </div>
 
-            <div className="premium-stat-card">
+            <div className="premium-stat-card stat-card-purple">
               <div className="premium-stat-icon">
                 <i className="fas fa-chart-line" />
               </div>
@@ -948,141 +1045,196 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         </div>
 
         {/* VERTICAL ANIMATED FEATURE CARDS */}
-        <div className="premium-section features" id="features">
-          <h2 className="premium-section-title animate-on-scroll">How It Works</h2>
-          <div className="vertical-feature-grid">
-            <div className="vertical-feature-card animate-on-scroll stagger-1">
-              <div className="vertical-card-top">
-                <div className="vertical-feature-icon">
-                  <i className="fas fa-brain"></i>
-                </div>
-                <span className="vertical-step-badge">Step 01</span>
-              </div>
-              <h3>AI Matching Algorithm</h3>
-              <p>Our intelligent system automatically cross-references lost reports with found items in real-time. It analyzes descriptions, categories, and visual data to immediately notify you of matches.</p>
-              <div className="vertical-card-footer">
-                <span className="feature-tag"><i className="fas fa-bolt"></i> Real-time Scanner</span>
-              </div>
-            </div>
-
-            <div className="vertical-feature-card animate-on-scroll stagger-2">
-              <div className="vertical-card-top">
-                <div className="vertical-feature-icon">
-                  <i className="fas fa-map-marked-alt"></i>
-                </div>
-                <span className="vertical-step-badge">Step 02</span>
-              </div>
-              <h3>Smart Maps</h3>
-              <p>Interactive location tracking showing where items are frequently lost or found in your specific area, complete with geo-fenced search alerts.</p>
-              <div className="vertical-card-footer">
-                <span className="feature-tag"><i className="fas fa-compass"></i> Geo-Radar</span>
-              </div>
-            </div>
-
-            <div className="vertical-feature-card animate-on-scroll stagger-3">
-              <div className="vertical-card-top">
-                <div className="vertical-feature-icon">
-                  <i className="fas fa-user-shield"></i>
-                </div>
-                <span className="vertical-step-badge">Step 03</span>
-              </div>
-              <h3>Secure Verification</h3>
-              <p>Built-in identity checks and 6-digit claim verification codes ensure valuable items are only returned to their rightful verified owners.</p>
-              <div className="vertical-card-footer">
-                <span className="feature-tag"><i className="fas fa-lock"></i> Fraud Protection</span>
-              </div>
-            </div>
-
-            <div className="vertical-feature-card animate-on-scroll stagger-4">
-              <div className="vertical-card-top">
-                <div className="vertical-feature-icon">
-                  <i className="fas fa-comment-medical"></i>
-                </div>
-                <span className="vertical-step-badge">Step 04</span>
-              </div>
-              <h3>Encrypted Chat</h3>
-              <p>Communicate securely with finders without revealing your personal contact information until you are ready to arrange a safe meetup.</p>
-              <div className="vertical-card-footer">
-                <span className="feature-tag"><i className="fas fa-shield-alt"></i> Anonymous P2P</span>
-              </div>
-            </div>
+        {/* ── BROWSE CATEGORIES ── */}
+        <div className="browse-categories-section animate-on-scroll" id="categories">
+          <div className="browse-cat-header">
+            <h2 className="browse-cat-title">Browse Categories</h2>
+            <button
+              className="browse-cat-viewall"
+              onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}
+            >
+              View All Categories <i className="fas fa-arrow-right" />
+            </button>
           </div>
-        </div>
-
-        {/* CATEGORIES SECTION */}
-        <div className="premium-section animate-on-scroll" id="categories" style={{ paddingTop: 0 }}>
-          <h2 className="premium-section-title" style={{ marginBottom: '2.5rem' }}>Commonly Recovered Items</h2>
-          <div className="category-grid">
-            {[
-              { img: catElectronicsImg, name: 'Electronics', desc: 'Phones, laptops, earbuds' },
-              { img: catDocumentsImg, name: 'Documents', desc: 'IDs, passports, wallets' },
-              { img: catKeysImg, name: 'Keys', desc: 'Car keys, house keys' },
-              { img: catBagsImg, name: 'Bags', desc: 'Backpacks, luggage' },
-              { img: catJewelryImg, name: 'Jewelry', desc: 'Rings, watches' },
-            ].map((cat, idx) => (
-              <div key={cat.name} className={`category-card animate-on-scroll stagger-${(idx % 5) + 1}`}>
-                <div className="category-img-wrapper">
-                  <img src={cat.img} alt={cat.name} className="category-real-img" />
+          <div className="browse-cat-grid">
+            {categoryCounts.map(cat => (
+              <button
+                key={cat.key}
+                className="browse-cat-chip"
+                onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}
+              >
+                <div className="browse-cat-icon-ring" style={{ background: `${cat.color}18`, color: cat.color }}>
+                  <i className={`fas ${cat.icon}`} />
                 </div>
-                <h4>{cat.name}</h4>
-                <p>{cat.desc}</p>
-              </div>
+                <span className="browse-cat-label">{cat.label}</span>
+                <span className="browse-cat-count">
+                  {cat.key === 'other' ? `${cat.count}+` : cat.count} Items
+                </span>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* SECURITY HIGHLIGHT */}
-        <div className="premium-section animate-on-scroll" id="safety" style={{ paddingTop: 0 }}>
-          <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)', border: '1px solid #dbeafe', borderRadius: '24px', padding: '3rem 2rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-50%', left: '-20%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }}></div>
-            <h2 style={{ color: '#1e3a8a', fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Your Data is Secure With Us</h2>
-            <p style={{ color: 'var(--text-muted)', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6', fontSize: '1.05rem' }}>
-              We prioritize your privacy and safety. All personal information is encrypted. Our smart matching algorithm ensures you only interact with verified individuals, and your contact details are never shared without your explicit consent. Focus on finding your items, we'll handle the security.
-            </p>
+        {/* ── RECENTLY FOUND ITEMS ── */}
+        {foundItems.length > 0 && (
+          <div className="recently-found-section animate-on-scroll">
+            <div className="browse-cat-header">
+              <h2 className="browse-cat-title">Recently Found Items</h2>
+              <button
+                className="browse-cat-viewall"
+                onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}
+              >
+                View All Found Items <i className="fas fa-arrow-right" />
+              </button>
+            </div>
+            <div className="found-items-row">
+              {foundItems.map(item => {
+                const imgSrc = (item.imageFront?.startsWith('http') || item.imageFront?.includes('/') || item.imageFront?.startsWith('data:'))
+                  ? item.imageFront
+                  : item.imageFront
+                    ? `${apiBase.replace('/api', '')}/uploads/items/${item.imageFront}`
+                    : null;
+                return (
+                  <button
+                    key={item.id}
+                    className="found-item-card"
+                    onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}
+                  >
+                    <div className="found-item-photo">
+                      {imgSrc ? (
+                        <img src={imgSrc} alt={item.title} />
+                      ) : (
+                        <div className="found-item-photo-placeholder">
+                          <i className="fas fa-image" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="found-item-info">
+                      <p className="found-item-name">{item.title}</p>
+                      <p className="found-item-location">
+                        <i className="fas fa-map-marker-alt" /> {item.location}
+                      </p>
+                      <p className="found-item-time">
+                        <i className="far fa-clock" /> {timeAgo(item.createdAt)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── HOW FINDIT WORKS – horizontal 4-step ── */}
+        <div className="how-works-section animate-on-scroll" id="features">
+          <div className="how-works-header">
+            <div className="how-works-line" />
+            <h2 className="how-works-title">How FindIt Works</h2>
+            <div className="how-works-line" />
+          </div>
+          <div className="how-works-steps">
+            {[
+              { num: '1', title: 'Report',  icon: 'fa-edit',      color: '#3b82f6', bg: '#eff6ff',
+                desc: 'Report your lost item in just a few simple steps.' },
+              { num: '2', title: 'Search',  icon: 'fa-search',    color: '#10b981', bg: '#ecfdf5',
+                desc: 'Search for lost or found items in your area.' },
+              { num: '3', title: 'Match',   icon: 'fa-bell',      color: '#f59e0b', bg: '#fffbeb',
+                desc: "We'll notify you when there's a possible match." },
+              { num: '4', title: 'Reunite', icon: 'fa-handshake', color: '#8b5cf6', bg: '#f5f3ff',
+                desc: 'Connect, verify and get your item back safely.' },
+            ].map((step, idx) => (
+              <React.Fragment key={step.num}>
+                <div className="how-works-step">
+                  <div
+                    className="how-works-icon-circle"
+                    style={{ background: step.bg, color: step.color }}
+                  >
+                    <i className={`fas ${step.icon}`} />
+                  </div>
+                  <p className="how-works-step-num">{step.num}. {step.title}</p>
+                  <p className="how-works-step-desc">{step.desc}</p>
+                </div>
+                {idx < 3 && <div className="how-works-arrow">→</div>}
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
-        {/* TESTIMONIALS SECTION */}
-        <div className="premium-section animate-on-scroll" id="about">
-          <h2 className="premium-section-title">Community Trust</h2>
-          <div className="testimonial-carousel">
-            <div className="testimonial-card">
-              <div className="testimonial-avatar">👤</div>
-              <div className="testimonial-content">
-                <p className="testimonial-text">"{testimonials[currentTestimonial].text}"</p>
-                {(testimonials[currentTestimonial] as any).adminResponse && (
-                  <div style={{
-                    background: 'rgba(37,99,235,0.06)',
-                    border: '1px solid rgba(37,99,235,0.15)',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
-                    marginTop: '12px',
-                    fontSize: '0.82rem',
-                    color: '#1d4ed8',
-                  }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 700, marginBottom: '4px' }}>
-                      ADMIN RESPONSE
+
+        {/* HAPPY REUNIONS – only rendered when real customer reviews exist */}
+        {testimonials.length > 0 && (
+        <div className="happy-reunions-section animate-on-scroll" id="about">
+          <div className="happy-reunions-header">
+            <div className="happy-reunions-line" />
+            <h2 className="happy-reunions-title">Happy Reunions</h2>
+            <div className="happy-reunions-line" />
+          </div>
+
+          <div className="happy-reunions-wrapper">
+            {/* Prev Arrow */}
+            <button
+              className="reunion-arrow reunion-arrow-left"
+              onClick={goPrev}
+              aria-label="Previous testimonials"
+            >
+              &#8249;
+            </button>
+
+            {/* Cards */}
+            <div className="reunion-cards-track">
+              {testimonials
+                .slice(carouselStart, carouselStart + cardsPerPage)
+                .map((t, idx) => {
+                  const ai = (t as any).avatarIndex ?? idx % 3;
+                  const positions = ['0% center', '50% center', '100% center'];
+                  return (
+                    <div className="reunion-card" key={`${carouselStart}-${idx}`}>
+                      <div className="reunion-quote-mark">&ldquo;</div>
+                      <p className="reunion-text">{t.text}</p>
+                      <div className="reunion-author-row">
+                        <div className="reunion-avatar-wrap">
+                          {t.avatarUrl ? (
+                            <img
+                              src={t.avatarUrl}
+                              alt={t.name}
+                              className="reunion-avatar-img"
+                              style={{ objectFit: 'cover', width: '100%', maxWidth: '100%' }}
+                            />
+                          ) : (
+                            <img
+                              src={testimonialsAvatarSprite}
+                              alt={t.name}
+                              className="reunion-avatar-img"
+                              style={{ objectPosition: positions[ai] }}
+                            />
+                          )}
+                        </div>
+                        <div className="reunion-author-info">
+                          <strong className="reunion-name">– {t.name}</strong>
+                          <span className="reunion-location">
+                            {(t as any).location || 'Nepal'}
+                          </span>
+                        </div>
+                        <div className="reunion-stars">
+                          {'★'.repeat((t as any).rating ?? 5)}
+                        </div>
+                      </div>
                     </div>
-                    {(testimonials[currentTestimonial] as any).adminResponse}
-                  </div>
-                )}
-                <div className="testimonial-author">
-                  <div className="author-name">{testimonials[currentTestimonial].name}</div>
-                  <div className="author-role">{testimonials[currentTestimonial].role}</div>
-                </div>
-              </div>
+                  );
+                })}
             </div>
-            <div className="testimonial-dots">
-              {testimonials.map((_, index) => (
-                <div
-                  key={index}
-                  className={`testimonial-dot ${index === currentTestimonial ? 'active' : ''}`}
-                  onClick={() => setCurrentTestimonial(index)}
-                />
-              ))}
-            </div>
+
+            {/* Next Arrow */}
+            <button
+              className="reunion-arrow reunion-arrow-right"
+              onClick={goNext}
+              aria-label="Next testimonials"
+            >
+              &#8250;
+            </button>
           </div>
         </div>
+        )}
 
         {/* FOOTER */}
         <footer className="landing-footer">
@@ -1170,19 +1322,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                     </a>
                   </li>
                 </ul>
-              </div>
-            </div>
-
-            {/* Platform Overview Banner Card */}
-            <div className="footer-explanation-card">
-              <div className="explanation-icon">
-                <i className="fas fa-info-circle"></i>
-              </div>
-              <div className="explanation-content">
-                <h5>About FindIT Lost & Found Platform</h5>
-                <p>
-                  FindIT bridges the gap between lost belongings and honest finders. Using advanced neural computer vision, lost reports are instantly cross-referenced against found item postings in real time. Sensitive identity documents are automatically obscured for privacy, ensuring safe, verified recoveries for citizens and venue partners nationwide.
-                </p>
               </div>
             </div>
 

@@ -19,25 +19,39 @@ export const PlatformReviewModal: React.FC<PlatformReviewModalProps> = ({
 }) => {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setImageFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    } else {
+      setImagePreview(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      const formData = new FormData();
+      formData.append('type', 'platform');
+      formData.append('rating', rating.toString());
+      formData.append('comment', comment.trim());
+      if (itemId) formData.append('itemId', itemId.toString());
+      if (imageFile) formData.append('image', imageFile);
+
       const res = await fetch(`${apiBase}/reviews`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          type: 'platform',
-          rating,
-          comment: comment.trim(),
-          itemId,
-        }),
+        body: formData,
       });
 
       if (res.ok) {
@@ -96,6 +110,25 @@ export const PlatformReviewModal: React.FC<PlatformReviewModalProps> = ({
               onChange={(e) => setComment(e.target.value)}
               required
             ></textarea>
+          </div>
+
+          <div className="form-group">
+            <label>Upload Picture (Optional)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ display: 'block', width: '100%', fontSize: '0.9rem' }}
+            />
+            {imagePreview && (
+              <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                <img
+                  src={imagePreview}
+                  alt="Review Preview"
+                  style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', objectFit: 'cover' }}
+                />
+              </div>
+            )}
           </div>
 
           <button
