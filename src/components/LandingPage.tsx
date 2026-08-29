@@ -398,7 +398,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         }
       }
     } catch {
-      showStatus(setLoginStatus, '⚠️ Backend not reachable on port 3000', 'error');
+      showStatus(setLoginStatus, '⚠️ Backend not reachable. Please check your connection or API URL.', 'error');
     } finally {
       setIsLoggingIn(false);
     }
