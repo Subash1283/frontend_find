@@ -108,8 +108,14 @@ useEffect(() => {
       const data = await res.json();
       if (res.ok) {
         showToast(data.message || `Claim ${status.toLowerCase()} successfully`, 'success');
-        if (status === 'APPROVED' && onClaimApproved) {
-          onClaimApproved();
+        if (status === 'APPROVED') {
+          const claim = claims.find((c) => c.id === requestId);
+          const claimantId = claim?.userId ?? claim?.user?.id;
+          const claimantName = claim?.user?.name || 'Claimant';
+          if (onClaimApproved) onClaimApproved();
+          if (onOpenChat && claimantId) {
+            onOpenChat(itemId, `${claimantName} - ${itemTitle || 'Item'}`, Number(claimantId));
+          }
           onClose();
         } else {
           fetchClaims();
@@ -253,7 +259,7 @@ useEffect(() => {
                             </div>
                           )}
                           {onOpenChat && (
-                            <button className="btn-primary" style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }} onClick={() => { onOpenChat(itemId, `Chat about ${itemTitle || 'Item'}`, claim.userId); onClose(); }}>
+                            <button className="btn-primary" style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }} onClick={() => { onOpenChat(itemId, `${claim.user?.name || 'Claimant'} - ${itemTitle || 'Item'}`, claim.userId); onClose(); }}>
                               <i className="fas fa-comments"></i> Chat with Claimant
                             </button>
                           )}

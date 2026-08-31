@@ -104,7 +104,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   }}
                   onClick={() => {
                     if (!notif.isRead) markNotificationRead(notif.id);
-                    if (code && onOpenVerificationModal) {
+                    if (notif.link?.includes('/tracking') && onNavigate) {
+                      onNavigate(notif.link);
+                    } else if (code && onOpenVerificationModal) {
                       onOpenVerificationModal(code, itemTitle, itemId);
                     } else if (notif.link && onNavigate) {
                       onNavigate(notif.link);

@@ -90,7 +90,7 @@ export const ClaimVerificationModal: React.FC<ClaimVerificationModalProps> = ({
             fontFamily: "'Outfit', sans-serif",
           }}
         >
-          Claim Verified! 🎉
+          Claim Verified!
         </h3>
 
         <p

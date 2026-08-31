@@ -85,13 +85,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [editItemId, setEditItemId] = useState<number | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [detailsItemId, setDetailsItemId] = useState<number | null>(null);
+  const [openManageClaims, setOpenManageClaims] = useState(false);
   const [showInbox, setShowInbox] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [activeChat, setActiveChat] = useState<{ itemId: number; title: string; otherUserId: number } | null>(null);
+  const activeChatRef = useRef(activeChat);
   const [showPlatformReview, setShowPlatformReview] = useState(false);
   const [reviewItemId, setReviewItemId] = useState<number | null>(null);
   const [verificationModalData, setVerificationModalData] = useState<{ show: boolean; code: string; itemTitle?: string; itemId?: number; otherUserId?: number } | null>(null);
   const [trackingClaimId, setTrackingClaimId] = useState<number | null>(null);
+
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
 
   // Map references
   const dashboardMapRef = useRef<L.Map | null>(null);
@@ -115,6 +121,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowReport(false);
     setShowDetails(false);
     setDetailsItemId(null);
+    setOpenManageClaims(false);
     setShowEdit(false);
     setEditItemId(null);
     setActiveChat(null);
@@ -133,7 +140,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (parsed.kind !== 'inbox') setShowInbox(false);
     if (parsed.kind !== 'profile') setShowProfile(false);
     if (parsed.kind !== 'report') setShowReport(false);
-    if (parsed.kind !== 'item') { setShowDetails(false); setDetailsItemId(null); }
+    if (parsed.kind !== 'item' && parsed.kind !== 'itemClaims') {
+      setShowDetails(false);
+      setDetailsItemId(null);
+      setOpenManageClaims(false);
+    }
     if (parsed.kind !== 'edit') { setShowEdit(false); setEditItemId(null); }
     if (parsed.kind !== 'chat') setActiveChat(null);
     if (parsed.kind !== 'tracking') setTrackingClaimId(null);
@@ -175,6 +186,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (parsed.kind === 'item') {
       setDetailsItemId(parsed.itemId);
       setShowDetails(true);
+      setOpenManageClaims(false);
+      return;
+    }
+
+    if (parsed.kind === 'itemClaims') {
+      setDetailsItemId(parsed.itemId);
+      setShowDetails(true);
+      setOpenManageClaims(true);
       return;
     }
 
@@ -399,7 +418,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         ) {
           pending++;
         }
-        if (c.lastMessage && !c.lastMessage.isRead && Number(c.lastMessage.senderId ?? c.lastMessage.sender?.id) !== Number(currentUser.id)) {
+        if (
+          c.hasUnread ||
+          (c.lastMessage &&
+            c.lastMessageIsRead === false &&
+            Number(c.lastMessageSenderId ?? c.lastMessage?.senderId) !== Number(currentUser.id))
+        ) {
           unread++;
         }
       });
@@ -424,7 +448,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     socket.on('newMessage', (msg: any) => {
       const senderId = Number(msg.sender?.id ?? msg.senderId ?? msg.sender);
-      if (senderId !== Number(currentUser.id)) {
+      const receiverId = Number(msg.receiver?.id ?? msg.receiverId ?? msg.receiver);
+      const msgItemId = Number(msg.itemId);
+      const viewingThisChat =
+        activeChatRef.current &&
+        Number(activeChatRef.current.itemId) === msgItemId &&
+        Number(activeChatRef.current.otherUserId) === senderId;
+
+      if (receiverId === Number(currentUser.id) && senderId !== Number(currentUser.id) && !viewingThisChat) {
         setUnreadMessagesCount(prev => prev + 1);
         playSound('receive');
         showToast(`New message from ${msg.sender?.name || 'User'}`, 'info');
@@ -751,7 +782,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (statusFilter === 'lost' || statusFilter === 'found') {
         matchFilter = item.type === statusFilter;
       } else if (statusFilter === 'claimed') {
-        matchFilter = item.status === 'claimed' || !!item.activeClaim;
+        matchFilter =
+          item.status !== 'solved' &&
+          (item.status === 'claimed' ||
+            ['PENDING', 'APPROVED', 'RETURN_ARRANGED', 'ITEM_RECEIVED'].includes(item.activeClaim?.status));
       } else if (statusFilter === 'solved') {
         matchFilter = item.status === 'solved';
       }
@@ -772,7 +806,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     activeCount: items.filter(i => (i.status || 'active') === 'active').length,
     lostCount: items.filter(i => i.type?.toLowerCase() === 'lost').length,
     foundCount: items.filter(i => i.type?.toLowerCase() === 'found').length,
-    claimedCount: items.filter(i => i.status === 'claimed' || !!i.activeClaim).length,
+    claimedCount: items.filter(
+      i =>
+        i.status !== 'solved' &&
+        (i.status === 'claimed' ||
+          ['PENDING', 'APPROVED', 'RETURN_ARRANGED', 'ITEM_RECEIVED'].includes(i.activeClaim?.status)),
+    ).length,
     returnedCount: items.filter(i => i.status === 'solved').length,
   }), [items]);
 
@@ -908,7 +947,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
             onClick={() => {
               setSidebarOpen(false);
-              setUnreadMessagesCount(0);
             }}
           >
             <span className="nav-icon"><i className="fas fa-envelope"></i></span>
@@ -1213,7 +1251,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
 
         {/* 1. MAIN DASHBOARD VIEW */}
-        {(viewMode === 'dashboard' || viewMode === 'myItems') && (
+        {(viewMode === 'dashboard' || viewMode === 'myItems') && trackingClaimId === null && (
           <div>
             {/* STATS PANEL */}
             <section className="stats-grid stats-grid-v2">
@@ -1286,13 +1324,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                   const activeClaim = item.activeClaim;
                   const itemStatusLabel = isSolved
-                    ? '🎉 Returned / Solved'
+                    ? 'Returned / Delivered'
                     : activeClaim?.status === 'RETURN_ARRANGED'
-                    ? '🤝 Return Arranged'
+                    ? '🚚 In Transit'
                     : activeClaim?.status === 'ITEM_RECEIVED'
-                    ? '✅ Item Received'
+                    ? '✅ Received'
                     : activeClaim?.status === 'APPROVED'
-                    ? '✓ Claim Verified'
+                    ? '📋 Claimed'
+                    : activeClaim?.status === 'PENDING'
+                    ? '⏳ Claim Pending'
                     : item.status === 'claimed'
                     ? '📋 Claimed'
                     : 'Active';
@@ -1433,7 +1473,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               style={{ background: '#0284c7', color: '#fff', borderColor: '#0284c7' }}
                               onClick={() => navigate(DASHBOARD_PATHS.tracking(activeClaim.id))}
                             >
-                              <i className="fas fa-truck-ramp-box"></i> Track Return
+                              <i className="fas fa-truck-ramp-box"></i> Track Status
                             </button>
                           )}
 
@@ -1475,7 +1515,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
 
         {/* 2. FULL GEO-MAP SECTION */}
-        {viewMode === 'mapview' && (
+        {viewMode === 'mapview' && trackingClaimId === null && (
           <div>
             <section
               className="panel-card"
@@ -1492,7 +1532,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
 
         {/* 3. ADMIN INTERFACES */}
-        {viewMode === 'admin' && currentUser?.role === 'admin' && (
+        {viewMode === 'admin' && currentUser?.role === 'admin' && trackingClaimId === null && (
           <AdminPanel
             token={token}
             apiBase={apiBase}
@@ -1508,6 +1548,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             token={token}
             apiBase={apiBase}
             currentUser={currentUser}
+            claimId={trackingClaimId}
             showToast={showToast}
             onOpenChat={(itemId, title, otherUserId) =>
               navigate(DASHBOARD_PATHS.chat(itemId), {
@@ -1570,6 +1611,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           currentUserId={currentUser?.id}
           onClose={closeOverlay}
           showToast={showToast}
+          initialShowManageClaims={openManageClaims}
+          onOpenTracking={(claimId) => navigate(DASHBOARD_PATHS.tracking(claimId))}
           onOpenChat={(itemId, title, otherUserId) =>
             navigate(DASHBOARD_PATHS.chat(itemId), {
               state: { title, otherUserId } satisfies ChatLocationState,
@@ -1586,6 +1629,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           socket={socketRef.current}
           onClose={closeOverlay}
           onOpenChat={(itemId, title, otherUserId) => {
+            setUnreadMessagesCount((prev) => Math.max(0, prev - 1));
+            socketRef.current?.emit('getInbox');
             navigate(DASHBOARD_PATHS.chat(itemId), {
               state: { title, otherUserId } satisfies ChatLocationState,
             });
@@ -1786,11 +1831,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
           }}
           onNavigate={(link) => {
             setShowNotifications(false);
-            // If the link is an internal dashboard path or inbox, navigate there
+            const claimsMatch = link.match(/\/item(?:s)?\/(\d+)\/claims/);
+            if (claimsMatch) {
+              navigate(DASHBOARD_PATHS.itemClaims(claimsMatch[1]));
+              return;
+            }
+            const trackingMatch = link.match(/\/tracking\/(\d+)/);
+            if (trackingMatch) {
+              navigate(DASHBOARD_PATHS.tracking(trackingMatch[1]));
+              return;
+            }
             if (link === '/dashboard/inbox' || link === '/inbox') {
               navigate(DASHBOARD_PATHS.inbox);
             } else if (link.startsWith('/items/')) {
-              // Convert backend /items/id to frontend /dashboard/item/id
               const itemId = link.split('/')[2];
               navigate(DASHBOARD_PATHS.item(itemId));
             } else {

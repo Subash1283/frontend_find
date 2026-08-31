@@ -69,6 +69,7 @@ export const P2PChatModal: React.FC<P2PChatModalProps> = ({
             const ownerId = data.conversation.ownerId ?? data.conversation.owner?.id;
             setConversationOwnerId(ownerId != null ? Number(ownerId) : null);
           }
+          if (socket) socket.emit('getInbox');
         }
       } catch (err) {
         console.warn('[P2PChatModal] REST fetch failed:', err);

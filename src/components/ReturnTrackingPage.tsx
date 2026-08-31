@@ -5,6 +5,7 @@ interface ReturnTrackingPageProps {
   token: string;
   apiBase: string;
   currentUser?: any;
+  claimId?: number | string | null;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   onOpenChat: (itemId: number, title: string, otherUserId: number) => void;
 }
@@ -14,8 +15,10 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
   apiBase,
   showToast,
   onOpenChat,
+  claimId: claimIdProp,
 }) => {
-  const { claimId } = useParams<{ claimId: string }>();
+  const { claimId: claimIdParam } = useParams<{ claimId: string }>();
+  const claimId = claimIdProp != null ? String(claimIdProp) : claimIdParam;
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -129,15 +132,15 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
     },
     {
       key: 'APPROVED',
-      title: 'Claim Verified',
-      subtitle: 'Claim verified and approved by admin/owner',
+      title: 'Claimed',
+      subtitle: 'Claim confirmed — item is reserved for the claimant',
       date: claim.verifiedAt,
       isDone: ['APPROVED', 'RETURN_ARRANGED', 'ITEM_RECEIVED', 'RETURN_COMPLETED'].includes(claim.status),
     },
     {
       key: 'RETURN_ARRANGED',
-      title: 'Return Arranged',
-      subtitle: 'Owner and finder agreed on return details via chat',
+      title: 'In Transit',
+      subtitle: 'Handover is in progress between the finder and claimant',
       date: claim.returnArrangedAt,
       isDone: ['RETURN_ARRANGED', 'ITEM_RECEIVED', 'RETURN_COMPLETED'].includes(claim.status),
     },
@@ -150,8 +153,8 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
     },
     {
       key: 'RETURN_COMPLETED',
-      title: 'Return Completed',
-      subtitle: 'Lost-and-found process successfully closed',
+      title: 'Delivered',
+      subtitle: 'Item received and the return is complete',
       date: claim.completedAt,
       isDone: claim.status === 'RETURN_COMPLETED',
     },
@@ -283,7 +286,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
                   boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
                 }}
               >
-                <i className="fas fa-comments"></i> 💬 Chat with {otherRoleTitle} ({otherUser.name})
+                <i className="fas fa-comments"></i>  Chat with {otherRoleTitle} ({otherUser.name})
               </button>
             </div>
           )}
@@ -428,7 +431,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
 
           {claim.status === 'RETURN_COMPLETED' && (
             <div style={{ background: 'rgba(16,185,129,0.1)', padding: '16px 20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(16,185,129,0.3)', color: '#047857', fontWeight: 700 }}>
-              🎉 Return Process Completed Successfully! Thank you for using FindIt.
+              Return Process Completed Successfully! Thank you for using FindIt.
             </div>
           )}
         </div>
@@ -479,7 +482,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
         <div className="modal active" style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', zIndex: 12000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="modal-card" style={{ maxWidth: '440px', width: '90%', padding: '32px', textAlign: 'center', borderRadius: '20px', background: '#fff' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '12px', color: '#10b981' }}>
-              🎉
+              <i className="fas fa-check-circle"></i>
             </div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0 0 10px' }}>
               Item Successfully Returned

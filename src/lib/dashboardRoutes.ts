@@ -10,6 +10,7 @@ export const DASHBOARD_PATHS = {
   report: '/dashboard/report',
   item: (id: number | string) => `/dashboard/item/${id}`,
   itemEdit: (id: number | string) => `/dashboard/item/${id}/edit`,
+  itemClaims: (id: number | string) => `/dashboard/item/${id}/claims`,
   chat: (itemId: number | string) => `/dashboard/chat/${itemId}`,
   tracking: (claimId: number | string) => `/dashboard/tracking/${claimId}`,
 } as const;
@@ -34,6 +35,7 @@ export type DashboardPathParse =
   | { kind: 'report' }
   | { kind: 'item'; itemId: number }
   | { kind: 'edit'; itemId: number }
+  | { kind: 'itemClaims'; itemId: number }
   | { kind: 'chat'; itemId: number }
   | { kind: 'tracking'; claimId: number }
   | { kind: 'unknown' };
@@ -51,6 +53,9 @@ export function parseDashboardPath(pathname: string): DashboardPathParse {
 
   let match = path.match(/^\/dashboard\/item\/(\d+)\/edit$/);
   if (match) return { kind: 'edit', itemId: Number(match[1]) };
+
+  match = path.match(/^\/dashboard\/item\/(\d+)\/claims$/);
+  if (match) return { kind: 'itemClaims', itemId: Number(match[1]) };
 
   match = path.match(/^\/dashboard\/item\/(\d+)$/);
   if (match) return { kind: 'item', itemId: Number(match[1]) };
@@ -104,5 +109,7 @@ export function overlayPageMeta(
     return { title: 'Profile', subtitle: 'Account and verification settings', icon: 'fa-user-cog' };
   if (pathname.includes('/report'))
     return { title: 'Report Item', subtitle: 'Submit a new lost or found post', icon: 'fa-plus-circle' };
+  if (pathname.includes('/tracking'))
+    return { title: 'Track Status', subtitle: 'Claimed and in-transit handover progress', icon: 'fa-truck-ramp-box' };
   return null;
 }

@@ -12,6 +12,8 @@ interface ItemDetailsModalProps {
   onClose: () => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   onOpenChat?: (itemId: number, title: string, otherUserId: number) => void;
+  onOpenTracking?: (claimId: number) => void;
+  initialShowManageClaims?: boolean;
 }
 
 export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
@@ -22,8 +24,11 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   onClose,
   showToast,
   onOpenChat,
+  onOpenTracking,
+  initialShowManageClaims = false,
 }) => {
   const [item, setItem] = useState<any>(null);
+  const [activeClaim, setActiveClaim] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSensRevealed, setIsSensRevealed] = useState(false);
   const [reporterStats, setReporterStats] = useState<{ averageRating: number; totalReviews: number } | null>(null);
@@ -34,7 +39,13 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [showRequestClaimModal, setShowRequestClaimModal] = useState(false);
   const [proofMessage, setProofMessage] = useState('');
   const [isClaiming, setIsClaiming] = useState(false);
-  const [showManageClaimsModal, setShowManageClaimsModal] = useState(false);
+  const [showManageClaimsModal, setShowManageClaimsModal] = useState(initialShowManageClaims);
+
+  useEffect(() => {
+    if (initialShowManageClaims) {
+      setShowManageClaimsModal(true);
+    }
+  }, [initialShowManageClaims, itemId]);
 
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
@@ -124,8 +135,23 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       }
     };
 
+    const fetchActiveClaim = async () => {
+      try {
+        const res = await fetch(`${apiBase}/items/${itemId}/active-claim`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setActiveClaim(data || null);
+        }
+      } catch {
+        setActiveClaim(null);
+      }
+    };
+
     fetchItemDetails();
     fetchUserDispute();
+    fetchActiveClaim();
   }, [itemId, apiBase, token, onClose, showToast]);
 
   useEffect(() => {
@@ -164,6 +190,20 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const isTextMasked = item.sensitive && !isSensRevealed;
   const isImageBlurred = item.sensitive && item.sensitiveBlur && !isSensRevealed;
   const isOwner = currentUserId && item?.user?.id && Number(currentUserId) === Number(item.user.id);
+  const claimStatusLabel =
+    activeClaim?.status === 'RETURN_COMPLETED'
+      ? 'DELIVERED'
+      : activeClaim?.status === 'ITEM_RECEIVED'
+      ? 'RECEIVED'
+      : activeClaim?.status === 'RETURN_ARRANGED'
+      ? 'IN TRANSIT'
+      : activeClaim?.status === 'APPROVED' || item.status === 'claimed'
+      ? 'CLAIMED'
+      : activeClaim?.status === 'PENDING'
+      ? 'CLAIM PENDING'
+      : isResolved
+      ? 'RESOLVED'
+      : 'ACTIVE';
   const maskString = (text: string): string => {
     if (!text) return text;
     const trimmed = text.trim();
@@ -217,12 +257,26 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               <span
                 className="status-badge"
                 style={{
-                  background: item.status === 'claimed' ? 'var(--found-bg)' : isResolved ? 'var(--found-bg)' : 'var(--accent-soft)',
-                  color: item.status === 'claimed' ? 'var(--found)' : isResolved ? 'var(--found)' : 'var(--accent)',
-                  border: `1px solid ${item.status === 'claimed' || isResolved ? 'rgba(16,185,129,0.2)' : 'rgba(6,182,212,0.2)'}`,
+                  background:
+                    claimStatusLabel === 'IN TRANSIT'
+                      ? '#e0f2fe'
+                      : claimStatusLabel === 'CLAIMED' || claimStatusLabel === 'CLAIM PENDING'
+                      ? '#fff7ed'
+                      : item.status === 'claimed' || isResolved
+                      ? 'var(--found-bg)'
+                      : 'var(--accent-soft)',
+                  color:
+                    claimStatusLabel === 'IN TRANSIT'
+                      ? '#0369a1'
+                      : claimStatusLabel === 'CLAIMED' || claimStatusLabel === 'CLAIM PENDING'
+                      ? '#c2410c'
+                      : item.status === 'claimed' || isResolved
+                      ? 'var(--found)'
+                      : 'var(--accent)',
+                  border: '1px solid rgba(2,132,199,0.25)',
                 }}
               >
-                {item.status === 'claimed' ? 'CLAIMED' : isResolved ? 'RESOLVED' : 'ACTIVE'}
+                {claimStatusLabel}
               </span>
             </div>
           </div>
@@ -464,6 +518,20 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   disabled={isClaiming}
                 >
                   <i className="fas fa-hand-paper"></i> Request Claim
+                </button>
+              )}
+              {activeClaim && onOpenTracking && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '6px', background: '#0284c7', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTracking(activeClaim.id);
+                    onClose();
+                  }}
+                >
+                  <i className="fas fa-truck-ramp-box"></i> Track Status
                 </button>
               )}
               {item.status === 'claimed' && currentUserId && item.claimedById === currentUserId && item.user?.id && onOpenChat && (
