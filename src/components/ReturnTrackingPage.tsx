@@ -95,6 +95,36 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
     }
   };
 
+  const handleRevokeClaim = async () => {
+    if (!claimId) return;
+    const claimantName = data?.claim?.user?.name || 'this claimant';
+    if (!window.confirm(`Revoke the claim by ${claimantName}? The item will be available again so other users can claim it.`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/items/claim-requests/${claimId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'REVOKED' }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        showToast(result.message || 'Claim revoked. Other users can claim this item again.', 'success');
+        fetchTrackingData();
+      } else {
+        showToast(result.message || 'Failed to revoke claim', 'error');
+      }
+    } catch {
+      showToast('Error revoking claim', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-soft)' }}>
@@ -116,7 +146,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
     );
   }
 
-  const { claim, history, isClaimant } = data;
+  const { claim, history, isClaimant, isPoster, isAdmin } = data;
   const item = claim.item || {};
   const otherUser = isClaimant ? item.user : claim.user;
   const otherRoleTitle = item.type === 'lost' ? (isClaimant ? 'Finder' : 'Owner') : (isClaimant ? 'Finder' : 'Owner');
@@ -432,6 +462,40 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
           {claim.status === 'RETURN_COMPLETED' && (
             <div style={{ background: 'rgba(16,185,129,0.1)', padding: '16px 20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(16,185,129,0.3)', color: '#047857', fontWeight: 700 }}>
               Return Process Completed Successfully! Thank you for using FindIt.
+            </div>
+          )}
+
+          {claim.status === 'REVOKED' && (
+            <div style={{ background: 'rgba(234,88,12,0.08)', padding: '16px 20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(234,88,12,0.3)', color: '#9a3412', fontWeight: 700, marginTop: '16px' }}>
+              This claim was revoked. The item is available for other claimers.
+            </div>
+          )}
+
+          {(isPoster || isAdmin) && ['APPROVED', 'RETURN_ARRANGED'].includes(claim.status) && (
+            <div style={{ background: 'rgba(234,88,12,0.06)', padding: '16px 20px', borderRadius: '12px', border: '1px solid rgba(234,88,12,0.25)', marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <strong style={{ display: 'block', color: '#9a3412', fontSize: '0.95rem' }}>Wrong person approved?</strong>
+                <span style={{ fontSize: '0.82rem', color: '#c2410c' }}>
+                  Revoke this claim if it was approved by mistake so another user can claim the item.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRevokeClaim}
+                disabled={actionLoading}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  background: '#ea580c',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {actionLoading ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-undo" style={{ marginRight: '6px' }}></i> Revoke Claim</>}
+              </button>
             </div>
           )}
         </div>

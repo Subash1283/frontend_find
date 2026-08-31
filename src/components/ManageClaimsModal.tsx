@@ -26,41 +26,11 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
   const [claims, setClaims] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-// Added revocation and confirmation state
-const [revokeAction, setRevokeAction] = useState<null | { requestId: number; userName: string }>(null);
-const [confirmAction, setConfirmAction] = useState<null | { requestId: number; status: 'APPROVED' | 'REJECTED'; userName: string }>(null);
-    const revokeClaim = async (requestId: number) => {
-      setIsProcessing(true);
-      try {
-        const res = await fetch(`${apiBase}/items/claim-requests/${requestId}`, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ status: 'REVOKED' }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          showToast(data.message || 'Claim revoked successfully', 'success');
-          fetchClaims();
-        } else {
-          showToast(data.message || 'Failed to revoke claim', 'error');
-        }
-      } catch {
-        showToast('Error revoking claim', 'error');
-      } finally {
-        setIsProcessing(false);
-        setRevokeAction(null);
-      }
-    };
-
-// Effect to handle revocation when revokeAction is set
-useEffect(() => {
-  if (revokeAction) {
-    revokeClaim(revokeAction.requestId);
-  }
-}, [revokeAction]);
+  const [confirmAction, setConfirmAction] = useState<null | {
+    requestId: number;
+    status: 'APPROVED' | 'REJECTED' | 'REVOKED';
+    userName: string;
+  }>(null);
 
 
   useEffect(() => {
@@ -87,7 +57,11 @@ useEffect(() => {
     }
   };
 
-  const promptConfirm = (requestId: number, status: 'APPROVED' | 'REJECTED', userName: string) => {
+  const promptConfirm = (
+    requestId: number,
+    status: 'APPROVED' | 'REJECTED' | 'REVOKED',
+    userName: string,
+  ) => {
     setConfirmAction({ requestId, status, userName });
   };
 
@@ -106,21 +80,23 @@ useEffect(() => {
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
-      if (res.ok) {
-        showToast(data.message || `Claim ${status.toLowerCase()} successfully`, 'success');
-        if (status === 'APPROVED') {
-          const claim = claims.find((c) => c.id === requestId);
-          const claimantId = claim?.userId ?? claim?.user?.id;
-          const claimantName = claim?.user?.name || 'Claimant';
-          if (onClaimApproved) onClaimApproved();
-          if (onOpenChat && claimantId) {
-            onOpenChat(itemId, `${claimantName} - ${itemTitle || 'Item'}`, Number(claimantId));
+        if (res.ok) {
+          showToast(data.message || `Claim ${status.toLowerCase()} successfully`, 'success');
+          if (onClaimApproved && (status === 'APPROVED' || status === 'REVOKED')) {
+            onClaimApproved();
           }
-          onClose();
+          if (status === 'APPROVED') {
+            const claim = claims.find((c) => c.id === requestId);
+            const claimantId = claim?.userId ?? claim?.user?.id;
+            const claimantName = claim?.user?.name || 'Claimant';
+            if (onOpenChat && claimantId) {
+              onOpenChat(itemId, `${claimantName} - ${itemTitle || 'Item'}`, Number(claimantId));
+            }
+            onClose();
+          } else {
+            fetchClaims();
+          }
         } else {
-          fetchClaims();
-        }
-      } else {
         showToast(data.message || 'Failed to process claim', 'error');
       }
     } catch {
@@ -131,6 +107,16 @@ useEffect(() => {
   };
 
   const isApprove = confirmAction?.status === 'APPROVED';
+  const isRevoke = confirmAction?.status === 'REVOKED';
+
+  const claimStatusStyle = (status: string) => {
+    if (status === 'PENDING') return { backgroundColor: '#fef3c7', color: '#d97706' };
+    if (status === 'APPROVED' || status === 'RETURN_ARRANGED' || status === 'ITEM_RECEIVED') {
+      return { backgroundColor: '#dcfce7', color: '#16a34a' };
+    }
+    if (status === 'REVOKED') return { backgroundColor: '#ffedd5', color: '#c2410c' };
+    return { backgroundColor: '#fee2e2', color: '#ef4444' };
+  };
 
   return (
     <>
@@ -193,8 +179,7 @@ useEffect(() => {
                         borderRadius: '20px',
                         fontSize: '0.75rem',
                         fontWeight: 600,
-                        backgroundColor: claim.status === 'PENDING' ? '#fef3c7' : claim.status === 'APPROVED' ? '#dcfce7' : '#fee2e2',
-                        color: claim.status === 'PENDING' ? '#d97706' : claim.status === 'APPROVED' ? '#16a34a' : '#ef4444',
+                        ...claimStatusStyle(claim.status),
                       }}>
                         {claim.status}
                       </span>
@@ -241,7 +226,7 @@ useEffect(() => {
                         </button>
                       </div>
                     )}
-                    {claim.status === 'APPROVED' && (
+                    {['APPROVED', 'RETURN_ARRANGED'].includes(claim.status) && (
                       <>
                         <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px dashed #34d399', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                           {claim.verificationCode && (
@@ -263,12 +248,16 @@ useEffect(() => {
                               <i className="fas fa-comments"></i> Chat with Claimant
                             </button>
                           )}
-                          <button onClick={() => setRevokeAction({ requestId: claim.id, userName: claim.user?.name || 'this user' })} disabled={isProcessing} style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.78rem', background: '#f87171', border: 'none', color: '#fff', cursor: isProcessing ? 'not-allowed' : 'pointer' }}>
+                          <button
+                            onClick={() => promptConfirm(claim.id, 'REVOKED', claim.user?.name || 'this user')}
+                            disabled={isProcessing}
+                            style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.78rem', background: '#f87171', border: 'none', color: '#fff', cursor: isProcessing ? 'not-allowed' : 'pointer', fontWeight: 700 }}
+                          >
+                            <i className="fas fa-undo" style={{ marginRight: '6px' }}></i>
                             Revoke Claim
                           </button>
                         </div>
                       </>
-
                     )}
                   </div>
                 ))}
@@ -315,6 +304,8 @@ useEffect(() => {
                 textAlign: 'center',
                 background: isApprove
                   ? 'linear-gradient(135deg, #ecfdf5, #d1fae5)'
+                  : isRevoke
+                  ? 'linear-gradient(135deg, #fff7ed, #ffedd5)'
                   : 'linear-gradient(135deg, #fef2f2, #fee2e2)',
               }}
             >
@@ -326,26 +317,28 @@ useEffect(() => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: isApprove ? '#10b981' : '#ef4444',
+                  backgroundColor: isApprove ? '#10b981' : isRevoke ? '#ea580c' : '#ef4444',
                   color: '#fff',
                   fontSize: '1.5rem',
                   marginBottom: '0.75rem',
                   boxShadow: isApprove
                     ? '0 4px 14px rgba(16,185,129,0.4)'
+                    : isRevoke
+                    ? '0 4px 14px rgba(234,88,12,0.4)'
                     : '0 4px 14px rgba(239,68,68,0.4)',
                 }}
               >
-                <i className={isApprove ? 'fas fa-check' : 'fas fa-times'}></i>
+                <i className={isApprove ? 'fas fa-check' : isRevoke ? 'fas fa-undo' : 'fas fa-times'}></i>
               </div>
               <h4
                 style={{
                   margin: 0,
                   fontSize: '1.2rem',
                   fontWeight: 700,
-                  color: isApprove ? '#065f46' : '#991b1b',
+                  color: isApprove ? '#065f46' : isRevoke ? '#9a3412' : '#991b1b',
                 }}
               >
-                {isApprove ? 'Approve Claim' : 'Reject Claim'}
+                {isApprove ? 'Approve Claim' : isRevoke ? 'Revoke Claim' : 'Reject Claim'}
               </h4>
             </div>
 
@@ -367,6 +360,15 @@ useEffect(() => {
                     <br />
                     <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
                       A verification code will be generated and the item will be marked as claimed.
+                    </span>
+                  </>
+                ) : isRevoke ? (
+                  <>
+                    Are you sure you want to <strong style={{ color: '#ea580c' }}>revoke</strong> the claim by{' '}
+                    <strong>{confirmAction.userName}</strong>?
+                    <br />
+                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                      The item will be available again. Other users who were also claiming it can be considered.
                     </span>
                   </>
                 ) : (
@@ -421,13 +423,15 @@ useEffect(() => {
                   padding: '10px 18px',
                   borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: isApprove ? '#10b981' : '#ef4444',
+                  backgroundColor: isApprove ? '#10b981' : isRevoke ? '#ea580c' : '#ef4444',
                   color: '#ffffff',
                   fontWeight: 600,
                   fontSize: '0.9rem',
                   cursor: 'pointer',
                   boxShadow: isApprove
                     ? '0 2px 10px rgba(16,185,129,0.35)'
+                    : isRevoke
+                    ? '0 2px 10px rgba(234,88,12,0.35)'
                     : '0 2px 10px rgba(239,68,68,0.35)',
                   transition: 'all 0.15s ease',
                 }}
@@ -435,17 +439,23 @@ useEffect(() => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.boxShadow = isApprove
                     ? '0 4px 14px rgba(16,185,129,0.45)'
+                    : isRevoke
+                    ? '0 4px 14px rgba(234,88,12,0.45)'
                     : '0 4px 14px rgba(239,68,68,0.45)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = isApprove
                     ? '0 2px 10px rgba(16,185,129,0.35)'
+                    : isRevoke
+                    ? '0 2px 10px rgba(234,88,12,0.35)'
                     : '0 2px 10px rgba(239,68,68,0.35)';
                 }}
               >
                 {isApprove ? (
                   <><i className="fas fa-check" style={{ marginRight: '6px' }}></i>Yes, Approve</>
+                ) : isRevoke ? (
+                  <><i className="fas fa-undo" style={{ marginRight: '6px' }}></i>Yes, Revoke</>
                 ) : (
                   <><i className="fas fa-times" style={{ marginRight: '6px' }}></i>Yes, Reject</>
                 )}

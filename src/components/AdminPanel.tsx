@@ -73,7 +73,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Claims audit state
   const [claims, setClaims] = useState<any[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(false);
-  const [claimsFilter, setClaimsFilter] = useState<'all' | 'pending' | 'approved' | 'return_arranged' | 'return_completed' | 'rejected'>('all');
+  const [claimsFilter, setClaimsFilter] = useState<'all' | 'pending' | 'approved' | 'return_arranged' | 'return_completed' | 'rejected' | 'revoked'>('all');
 
   // Disputes state
   const [disputes, setDisputes] = useState<any[]>([]);
@@ -161,6 +161,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         showToast('Failed to update dispute', 'error');
       }
     } catch { showToast('Connection error', 'error'); }
+  };
+
+  const handleRevokeClaim = async (claimId: number, claimantName: string) => {
+    if (!window.confirm(`Revoke the approved claim by ${claimantName}? The item will become available again so other users can claim it.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${apiBase}/items/claim-requests/${claimId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'REVOKED' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast(data.message || 'Claim revoked successfully', 'success');
+        fetchClaims();
+      } else {
+        showToast(data.message || 'Failed to revoke claim', 'error');
+      }
+    } catch {
+      showToast('Connection error', 'error');
+    }
   };
 
   const handleAdminMessage = (receiverId: number, itemId: number, userName: string) => {
@@ -1467,7 +1489,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* Summary chips / filters */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '14px 0 4px' }}>
-          {(['all', 'pending', 'approved', 'return_arranged', 'return_completed', 'rejected'] as const).map(f => {
+          {(['all', 'pending', 'approved', 'return_arranged', 'return_completed', 'rejected', 'revoked'] as const).map(f => {
             const count = f === 'all' ? claims.length : claims.filter(c => c.status?.toLowerCase() === f).length;
             const labels: Record<string, string> = {
               all: 'All Claims',
@@ -1476,6 +1498,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               return_arranged: 'Return Arranged',
               return_completed: 'Item Received / Completed',
               rejected: 'Rejected Claims',
+              revoked: 'Revoked Claims',
             };
             const colors: Record<string, { bg: string; color: string }> = {
               all: { bg: 'var(--surface-2)', color: 'var(--text-main)' },
@@ -1484,6 +1507,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               return_arranged: { bg: 'rgba(37,99,235,0.1)', color: '#2563eb' },
               return_completed: { bg: 'rgba(16,185,129,0.15)', color: '#059669' },
               rejected: { bg: 'var(--lost-bg)', color: 'var(--lost)' },
+              revoked: { bg: 'rgba(234,88,12,0.12)', color: '#c2410c' },
             };
             const c = colors[f];
             return (
@@ -1550,6 +1574,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         return_completed: { background: 'rgba(16,185,129,0.15)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)' },
                         item_received: { background: 'rgba(16,185,129,0.15)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)' },
                         rejected: { background: 'var(--lost-bg)', color: 'var(--lost)', border: '1px solid rgba(239,68,68,0.2)' },
+                        revoked: { background: 'rgba(234,88,12,0.12)', color: '#c2410c', border: '1px solid rgba(234,88,12,0.3)' },
                       };
                       const badge = statusStyle[status] || statusStyle.pending;
                       const displayStatus = status === 'approved' ? 'Claim Verified' : status.replace('_', ' ');
@@ -1596,20 +1621,41 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             {c.receivedAt || c.completedAt ? new Date(c.receivedAt || c.completedAt).toLocaleDateString() : '—'}
                           </td>
                           <td style={{ padding: '10px' }}>
-                            <a
-                              href={`/dashboard/tracking/${c.id}`}
-                              style={{
-                                color: '#0284c7',
-                                textDecoration: 'none',
-                                fontWeight: 700,
-                                fontSize: '0.78rem',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                            >
-                              View Timeline <i className="fas fa-chevron-right" style={{ fontSize: '0.7rem' }}></i>
-                            </a>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                              <a
+                                href={`/dashboard/tracking/${c.id}`}
+                                style={{
+                                  color: '#0284c7',
+                                  textDecoration: 'none',
+                                  fontWeight: 700,
+                                  fontSize: '0.78rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                View Timeline <i className="fas fa-chevron-right" style={{ fontSize: '0.7rem' }}></i>
+                              </a>
+                              {['approved', 'return_arranged'].includes(status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRevokeClaim(c.id, c.user?.name || 'this user')}
+                                  style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: '#ea580c',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    fontSize: '0.72rem',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <i className="fas fa-undo" style={{ marginRight: '4px' }}></i>
+                                  Revoke
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
