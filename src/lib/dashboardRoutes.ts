@@ -11,6 +11,7 @@ export const DASHBOARD_PATHS = {
   item: (id: number | string) => `/dashboard/item/${id}`,
   itemEdit: (id: number | string) => `/dashboard/item/${id}/edit`,
   chat: (itemId: number | string) => `/dashboard/chat/${itemId}`,
+  tracking: (claimId: number | string) => `/dashboard/tracking/${claimId}`,
 } as const;
 
 export function viewToPath(view: DashboardView): string {
@@ -34,6 +35,7 @@ export type DashboardPathParse =
   | { kind: 'item'; itemId: number }
   | { kind: 'edit'; itemId: number }
   | { kind: 'chat'; itemId: number }
+  | { kind: 'tracking'; claimId: number }
   | { kind: 'unknown' };
 
 export function parseDashboardPath(pathname: string): DashboardPathParse {
@@ -55,6 +57,9 @@ export function parseDashboardPath(pathname: string): DashboardPathParse {
 
   match = path.match(/^\/dashboard\/chat\/(\d+)$/);
   if (match) return { kind: 'chat', itemId: Number(match[1]) };
+
+  match = path.match(/^\/dashboard\/tracking\/(\d+)$/);
+  if (match) return { kind: 'tracking', claimId: Number(match[1]) };
 
   return { kind: 'unknown' };
 }

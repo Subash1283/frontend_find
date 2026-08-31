@@ -73,7 +73,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Claims audit state
   const [claims, setClaims] = useState<any[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(false);
-  const [claimsFilter, setClaimsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [claimsFilter, setClaimsFilter] = useState<'all' | 'pending' | 'approved' | 'return_arranged' | 'return_completed' | 'rejected'>('all');
 
   // Disputes state
   const [disputes, setDisputes] = useState<any[]>([]);
@@ -1425,24 +1425,64 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       </div>
       )}
 
-      {/* CLAIMS AUDIT LOG */}
+      {/* CLAIMS & RETURNS AUDIT LOG */}
       {activeTab === 'claims' && (
       <div className="panel-card" style={{ marginTop: '22px' }}>
-        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span><i className="fas fa-clipboard-list"></i> Claim Requests Audit Log</span>
-          <button className="icon-btn" onClick={fetchClaims} title="Refresh claims" style={{ padding: '4px 10px', fontSize: '0.78rem' }}>
-            <i className="fas fa-sync-alt"></i> Refresh
-          </button>
+        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <span><i className="fas fa-clipboard-list"></i> Claims & Returns Management Dashboard</span>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              className="premium-btn-primary"
+              onClick={async () => {
+                try {
+                  const res = await fetch(`${apiBase}/items/admin/returns/pdf?status=${claimsFilter}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `returned-items-report-${claimsFilter}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    showToast('Returned items PDF generated successfully!', 'success');
+                  } else {
+                    showToast('Failed to generate PDF report', 'error');
+                  }
+                } catch {
+                  showToast('Error generating PDF report', 'error');
+                }
+              }}
+              style={{ padding: '6px 14px', fontSize: '0.82rem', background: '#0284c7', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              📄 Generate Returned Items PDF
+            </button>
+            <button className="icon-btn" onClick={fetchClaims} title="Refresh claims" style={{ padding: '6px 12px', fontSize: '0.78rem' }}>
+              <i className="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
         </div>
 
-        {/* Summary chips */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', margin: '14px 0 4px' }}>
-          {(['all', 'pending', 'approved', 'rejected'] as const).map(f => {
+        {/* Summary chips / filters */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '14px 0 4px' }}>
+          {(['all', 'pending', 'approved', 'return_arranged', 'return_completed', 'rejected'] as const).map(f => {
             const count = f === 'all' ? claims.length : claims.filter(c => c.status?.toLowerCase() === f).length;
+            const labels: Record<string, string> = {
+              all: 'All Claims',
+              pending: 'Pending Claims',
+              approved: 'Verified Claims',
+              return_arranged: 'Return Arranged',
+              return_completed: 'Item Received / Completed',
+              rejected: 'Rejected Claims',
+            };
             const colors: Record<string, { bg: string; color: string }> = {
               all: { bg: 'var(--surface-2)', color: 'var(--text-main)' },
               pending: { bg: 'var(--reward-bg)', color: 'var(--reward)' },
               approved: { bg: 'var(--found-bg)', color: 'var(--found)' },
+              return_arranged: { bg: 'rgba(37,99,235,0.1)', color: '#2563eb' },
+              return_completed: { bg: 'rgba(16,185,129,0.15)', color: '#059669' },
               rejected: { bg: 'var(--lost-bg)', color: 'var(--lost)' },
             };
             const c = colors[f];
@@ -1451,7 +1491,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 key={f}
                 onClick={() => setClaimsFilter(f)}
                 style={{
-                  padding: '5px 14px',
+                  padding: '6px 14px',
                   borderRadius: '99px',
                   border: `1.5px solid ${claimsFilter === f ? c.color : 'var(--border)'}`,
                   background: claimsFilter === f ? c.bg : 'transparent',
@@ -1460,10 +1500,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   fontSize: '0.75rem',
                   cursor: 'pointer',
                   transition: 'all 0.15s',
-                  textTransform: 'capitalize',
                 }}
               >
-                {f} ({count})
+                {labels[f]} ({count})
               </button>
             );
           })}
@@ -1480,22 +1519,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               return (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-soft)' }}>
                   <i className="fas fa-clipboard" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.3 }}></i>
-                  <div>No {claimsFilter !== 'all' ? claimsFilter : ''} claim requests found.</div>
+                  <div>No {claimsFilter !== 'all' ? claimsFilter.replace('_', ' ') : ''} claims found.</div>
                 </div>
               );
             }
             return (
               <div className="admin-table-wrap">
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                   <thead>
                     <tr style={{ background: 'var(--surface-2)', borderBottom: '1.5px solid var(--border)', textAlign: 'left' }}>
-                      <th style={{ padding: '12px', color: 'var(--text-muted)' }}>#</th>
-                      <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Status</th>
-                      <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Claimant</th>
-                      <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Item</th>
-                      <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Item Owner</th>
-                      <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Proof Message</th>
-                      <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Requested At</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Claim ID</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Status</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Item</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Claimant</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Finder / Owner</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Claim Date</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Verified Date</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Arranged Date</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Received / Completed Date</th>
+                      <th style={{ padding: '10px', color: 'var(--text-muted)' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1504,9 +1546,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       const statusStyle: Record<string, React.CSSProperties> = {
                         pending: { background: 'var(--reward-bg)', color: 'var(--reward)', border: '1px solid rgba(245,158,11,0.2)' },
                         approved: { background: 'var(--found-bg)', color: 'var(--found)', border: '1px solid rgba(34,197,94,0.25)' },
+                        return_arranged: { background: 'rgba(37,99,235,0.1)', color: '#2563eb', border: '1px solid rgba(37,99,235,0.3)' },
+                        return_completed: { background: 'rgba(16,185,129,0.15)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)' },
+                        item_received: { background: 'rgba(16,185,129,0.15)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)' },
                         rejected: { background: 'var(--lost-bg)', color: 'var(--lost)', border: '1px solid rgba(239,68,68,0.2)' },
                       };
                       const badge = statusStyle[status] || statusStyle.pending;
+                      const displayStatus = status === 'approved' ? 'Claim Verified' : status.replace('_', ' ');
+
                       return (
                         <tr
                           key={c.id}
@@ -1514,48 +1561,55 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
-                          <td style={{ padding: '12px', fontWeight: 600, color: 'var(--text-soft)' }}>#{c.id}</td>
-                          <td style={{ padding: '12px' }}>
+                          <td style={{ padding: '10px', fontWeight: 700, color: 'var(--text-soft)' }}>#{c.id}</td>
+                          <td style={{ padding: '10px' }}>
                             <span className="status-badge" style={{ ...badge, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem' }}>
-                              {status === 'approved' && <i className="fas fa-check" style={{ marginRight: '4px' }}></i>}
-                              {status === 'rejected' && <i className="fas fa-times" style={{ marginRight: '4px' }}></i>}
-                              {status === 'pending' && <i className="fas fa-hourglass-half" style={{ marginRight: '4px' }}></i>}
-                              {status}
+                              {displayStatus}
                             </span>
                           </td>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', flexShrink: 0 }}>
-                                {(c.user?.name || '?').charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: 600 }}>{c.user?.name || 'Unknown'}</div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-soft)' }}>{c.user?.email || ''}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <span style={{ fontWeight: 600 }}>{c.item?.title || <em style={{ color: 'var(--text-soft)' }}>Deleted</em>}</span>
+                          <td style={{ padding: '10px' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{c.item?.title || <em style={{ color: 'var(--text-soft)' }}>Deleted</em>}</span>
                             {c.item?.type && (
                               <span className={`status-badge ${c.item.type === 'lost' ? 'lost-tag' : 'found-tag'}`} style={{ marginLeft: '6px', fontSize: '0.6rem' }}>
                                 {c.item.type.toUpperCase()}
                               </span>
                             )}
                           </td>
-                          <td style={{ padding: '12px', color: 'var(--text-muted)' }}>
-                            {c.item?.user?.name || '—'}
+                          <td style={{ padding: '10px' }}>
+                            <div style={{ fontWeight: 600 }}>{c.user?.name || 'Unknown'}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-soft)' }}>{c.user?.email || ''}</div>
                           </td>
-                          <td style={{ padding: '12px', maxWidth: '220px' }}>
-                            {c.proofMessage ? (
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                "{c.proofMessage}"
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-soft)', fontSize: '0.75rem' }}>—</span>
-                            )}
+                          <td style={{ padding: '10px' }}>
+                            <div style={{ fontWeight: 600 }}>{c.item?.user?.name || '—'}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-soft)' }}>{c.item?.user?.email || ''}</div>
                           </td>
-                          <td style={{ padding: '12px', color: 'var(--text-soft)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                            {new Date(c.createdAt).toLocaleString()}
+                          <td style={{ padding: '10px', color: 'var(--text-soft)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}
+                          </td>
+                          <td style={{ padding: '10px', color: 'var(--text-soft)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            {c.verifiedAt ? new Date(c.verifiedAt).toLocaleDateString() : '—'}
+                          </td>
+                          <td style={{ padding: '10px', color: 'var(--text-soft)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            {c.returnArrangedAt ? new Date(c.returnArrangedAt).toLocaleDateString() : '—'}
+                          </td>
+                          <td style={{ padding: '10px', color: 'var(--text-soft)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            {c.receivedAt || c.completedAt ? new Date(c.receivedAt || c.completedAt).toLocaleDateString() : '—'}
+                          </td>
+                          <td style={{ padding: '10px' }}>
+                            <a
+                              href={`/dashboard/tracking/${c.id}`}
+                              style={{
+                                color: '#0284c7',
+                                textDecoration: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.78rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              View Timeline <i className="fas fa-chevron-right" style={{ fontSize: '0.7rem' }}></i>
+                            </a>
                           </td>
                         </tr>
                       );

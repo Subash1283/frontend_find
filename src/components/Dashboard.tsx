@@ -22,6 +22,7 @@ import { AIChatbot } from './AIChatbot';
 import { NotificationsModal } from './NotificationsModal';
 import { PlatformReviewModal } from './PlatformReviewModal';
 import { ClaimVerificationModal } from './ClaimVerificationModal';
+import { ReturnTrackingPage } from './ReturnTrackingPage';
 
 interface DashboardProps {
   token: string;
@@ -47,7 +48,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'lost' | 'found'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'lost' | 'found' | 'claimed' | 'solved'>('all');
   const [notifications, setNotifications] = useState<any[]>([]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [prevVerificationStatus, setPrevVerificationStatus] = useState<string | null>(null);
@@ -90,6 +91,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showPlatformReview, setShowPlatformReview] = useState(false);
   const [reviewItemId, setReviewItemId] = useState<number | null>(null);
   const [verificationModalData, setVerificationModalData] = useState<{ show: boolean; code: string; itemTitle?: string; itemId?: number; otherUserId?: number } | null>(null);
+  const [trackingClaimId, setTrackingClaimId] = useState<number | null>(null);
 
   // Map references
   const dashboardMapRef = useRef<L.Map | null>(null);
@@ -119,6 +121,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowNotifications(false);
     setShowPlatformReview(false);
     setReviewItemId(null);
+    setTrackingClaimId(null);
     navigate(viewToPath(viewMode));
   }, [navigate, viewMode]);
 
@@ -133,6 +136,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (parsed.kind !== 'item') { setShowDetails(false); setDetailsItemId(null); }
     if (parsed.kind !== 'edit') { setShowEdit(false); setEditItemId(null); }
     if (parsed.kind !== 'chat') setActiveChat(null);
+    if (parsed.kind !== 'tracking') setTrackingClaimId(null);
     setShowNotifications(false);
 
     if (parsed.kind === 'unknown') {
@@ -144,6 +148,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (parsed.view === 'admin' && currentUser?.role !== 'admin') {
         navigate(DASHBOARD_PATHS.home, { replace: true });
         return;
+      }
+      if (parsed.view === 'dashboard') {
+        setStatusFilter('all');
       }
       setViewMode(parsed.view);
       return;
@@ -174,6 +181,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (parsed.kind === 'edit') {
       setEditItemId(parsed.itemId);
       setShowEdit(true);
+      return;
+    }
+
+    if (parsed.kind === 'tracking') {
+      setTrackingClaimId(parsed.claimId);
       return;
     }
 
@@ -287,11 +299,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       if (res.ok) {
         const data = await res.json();
-        // Prevent state churn by only updating if data actually changed
-        setItems(prevItems => {
-          if (JSON.stringify(prevItems) === JSON.stringify(data)) return prevItems;
-          return data;
-        });
+        setItems(data);
       }
     } catch {
       showToast('Error loading items list', 'error');
@@ -738,7 +746,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
         item.title?.toLowerCase().includes(query) ||
         item.description?.toLowerCase().includes(query) ||
         item.location?.toLowerCase().includes(query);
-      const matchFilter = statusFilter === 'all' || item.type === statusFilter;
+      
+      let matchFilter = true;
+      if (statusFilter === 'lost' || statusFilter === 'found') {
+        matchFilter = item.type === statusFilter;
+      } else if (statusFilter === 'claimed') {
+        matchFilter = item.status === 'claimed' || !!item.activeClaim;
+      } else if (statusFilter === 'solved') {
+        matchFilter = item.status === 'solved';
+      }
+
       return matchSearch && matchFilter;
     });
   }, [items, searchQuery, statusFilter]);
@@ -751,10 +768,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
 
   // Stats computation (memoized)
-  const { activeCount, lostCount, foundCount } = useMemo(() => ({
+  const { activeCount, lostCount, foundCount, claimedCount, returnedCount } = useMemo(() => ({
     activeCount: items.filter(i => (i.status || 'active') === 'active').length,
     lostCount: items.filter(i => i.type?.toLowerCase() === 'lost').length,
     foundCount: items.filter(i => i.type?.toLowerCase() === 'found').length,
+    claimedCount: items.filter(i => i.status === 'claimed' || !!i.activeClaim).length,
+    returnedCount: items.filter(i => i.status === 'solved').length,
   }), [items]);
 
   const getVerificationStatusLabel = () => {
@@ -795,7 +814,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             to={DASHBOARD_PATHS.home}
             end
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => {
+              setStatusFilter('all');
+              setSidebarOpen(false);
+            }}
           >
             <span className="nav-icon"><i className="fas fa-chart-pie"></i></span>
             <span>Dashboard</span>
@@ -803,12 +825,74 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <NavLink
             to={DASHBOARD_PATHS.items}
-            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) => `nav-item${isActive && statusFilter === 'all' ? ' active' : ''}`}
+            onClick={() => {
+              setStatusFilter('all');
+              setSidebarOpen(false);
+            }}
           >
-            <span className="nav-icon"><i className="fas fa-user-tag"></i></span>
+            <span className="nav-icon"><i className="fas fa-box-open"></i></span>
             <span>My Items</span>
           </NavLink>
+
+          {/* Sub-menu under My Items for Return & Claim Statuses */}
+          <div style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '2px', margin: '2px 0 6px' }}>
+            <button
+              type="button"
+              className={`nav-item ${statusFilter === 'claimed' && viewMode === 'myItems' ? 'active' : ''}`}
+              style={{
+                width: '100%',
+                background: statusFilter === 'claimed' && viewMode === 'myItems' ? 'var(--accent-soft)' : 'none',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '0.82rem',
+                padding: '8px 12px',
+                borderRadius: '8px',
+              }}
+              onClick={() => {
+                setStatusFilter('claimed');
+                setSidebarOpen(false);
+                navigate(DASHBOARD_PATHS.items);
+              }}
+            >
+              <span className="nav-icon" style={{ fontSize: '0.85rem' }}><i className="fas fa-truck-ramp-box" style={{ color: '#0284c7' }}></i></span>
+              <span style={{ fontSize: '0.82rem' }}>In Transit / Claimed</span>
+              {claimedCount > 0 && (
+                <span className="nav-badge" style={{ background: '#0284c7', color: '#fff', fontSize: '0.7rem' }}>
+                  {claimedCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className={`nav-item ${statusFilter === 'solved' && viewMode === 'myItems' ? 'active' : ''}`}
+              style={{
+                width: '100%',
+                background: statusFilter === 'solved' && viewMode === 'myItems' ? 'var(--accent-soft)' : 'none',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '0.82rem',
+                padding: '8px 12px',
+                borderRadius: '8px',
+              }}
+              onClick={() => {
+                setStatusFilter('solved');
+                setSidebarOpen(false);
+                navigate(DASHBOARD_PATHS.items);
+              }}
+            >
+              <span className="nav-icon" style={{ fontSize: '0.85rem' }}><i className="fas fa-check-circle" style={{ color: '#16a34a' }}></i></span>
+              <span style={{ fontSize: '0.82rem' }}>Returned / Received</span>
+              {returnedCount > 0 && (
+                <span className="nav-badge" style={{ background: '#16a34a', color: '#fff', fontSize: '0.7rem' }}>
+                  {returnedCount}
+                </span>
+              )}
+            </button>
+          </div>
 
           <NavLink
             to={DASHBOARD_PATHS.map}
@@ -1180,7 +1264,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {/* ITEMS LISTING SECTION */}
             <section className="section-title">
               <h3>
-                <i className="fas fa-th-large"></i> Active Platform Feeds
+                <i className="fas fa-th-large"></i> {viewMode === 'myItems' ? 'My Reported Items' : 'Active Platform Feeds'}
               </h3>
               <span id="itemCountSpan">{filteredItems.length} feeds found</span>
             </section>
@@ -1199,6 +1283,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   const isSolved = (item.status || 'active') === 'solved';
                   const showSensitive =
                     item.sensitive && !revealedSensitives[item.id] && item.sensitiveBlur;
+
+                  const activeClaim = item.activeClaim;
+                  const itemStatusLabel = isSolved
+                    ? '🎉 Returned / Solved'
+                    : activeClaim?.status === 'RETURN_ARRANGED'
+                    ? '🤝 Return Arranged'
+                    : activeClaim?.status === 'ITEM_RECEIVED'
+                    ? '✅ Item Received'
+                    : activeClaim?.status === 'APPROVED'
+                    ? '✓ Claim Verified'
+                    : item.status === 'claimed'
+                    ? '📋 Claimed'
+                    : 'Active';
 
                   return (
                     <article key={item.id} className="item-card">
@@ -1221,6 +1318,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <i className="fas fa-image" style={{ opacity: 0.1 }}></i>
                           </div>
                         )}
+
+                        {/* Status Overlay Badge */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '10px',
+                            left: '10px',
+                            zIndex: 3,
+                            display: 'flex',
+                            gap: '6px',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <span className={`status-badge ${item.type === 'lost' ? 'lost-tag' : 'found-tag'}`}>
+                            {item.type.toUpperCase()}
+                          </span>
+                          <span
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              textTransform: 'uppercase',
+                              background: isSolved
+                                ? '#dcfce7'
+                                : activeClaim
+                                ? '#e0f2fe'
+                                : '#f1f5f9',
+                              color: isSolved
+                                ? '#16a34a'
+                                : activeClaim
+                                ? '#0284c7'
+                                : '#475569',
+                              border: `1px solid ${
+                                isSolved
+                                  ? 'rgba(22,163,74,0.3)'
+                                  : activeClaim
+                                  ? 'rgba(2,132,199,0.3)'
+                                  : 'rgba(71,85,105,0.2)'
+                              }`,
+                            }}
+                          >
+                            {itemStatusLabel}
+                          </span>
+                        </div>
 
                         {showSensitive && (
                           <div
@@ -1260,9 +1402,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.title}
                           </span>
-                          <span className={`status-badge ${item.type === 'lost' ? 'lost-tag' : 'found-tag'}`}>
-                            {item.type.toUpperCase()}
-                          </span>
                         </div>
 
                         <div className="location-line">
@@ -1280,13 +1419,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           </div>
                         )}
 
-                        <div className="card-actions">
+                        <div className="card-actions" style={{ flexWrap: 'wrap', gap: '6px' }}>
                           <button
                             className="btn-details"
                             onClick={() => navigate(DASHBOARD_PATHS.item(item.id))}
                           >
                             <i className="fas fa-eye"></i> View Details
                           </button>
+
+                          {activeClaim && (
+                            <button
+                              className="btn-details"
+                              style={{ background: '#0284c7', color: '#fff', borderColor: '#0284c7' }}
+                              onClick={() => navigate(DASHBOARD_PATHS.tracking(activeClaim.id))}
+                            >
+                              <i className="fas fa-truck-ramp-box"></i> Track Return
+                            </button>
+                          )}
 
                           {isOwner && (
                             <>
@@ -1350,6 +1499,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             allItems={items}
             showToast={showToast}
             openDeleteDialog={openDeleteDialog}
+          />
+        )}
+
+        {/* 4. CLAIM RETURN TRACKING PAGE */}
+        {trackingClaimId !== null && (
+          <ReturnTrackingPage
+            token={token}
+            apiBase={apiBase}
+            currentUser={currentUser}
+            showToast={showToast}
+            onOpenChat={(itemId, title, otherUserId) =>
+              navigate(DASHBOARD_PATHS.chat(itemId), {
+                state: { title, otherUserId } satisfies ChatLocationState,
+              })
+            }
           />
         )}
       </main>
