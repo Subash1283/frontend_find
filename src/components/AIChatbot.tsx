@@ -48,6 +48,64 @@ function isConfirmation(text: string): boolean {
   return isConfirm || isContactRequest;
 }
 
+const BUBBLE_SIZE = 60;
+const EDGE = 16;
+const POS_KEY = 'findit-assistant-pos';
+const PANEL_W = 380;
+const PANEL_H = 560;
+
+function clampAssistantPos(x: number, y: number) {
+  const maxX = Math.max(EDGE, window.innerWidth - BUBBLE_SIZE - EDGE);
+  const maxY = Math.max(EDGE, window.innerHeight - BUBBLE_SIZE - EDGE);
+  return {
+    x: Math.min(Math.max(EDGE, x), maxX),
+    y: Math.min(Math.max(EDGE, y), maxY),
+  };
+}
+
+function loadAssistantPos() {
+  try {
+    const raw = localStorage.getItem(POS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { x?: number; y?: number };
+      if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+        return clampAssistantPos(parsed.x, parsed.y);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return clampAssistantPos(
+    window.innerWidth - BUBBLE_SIZE - 24,
+    window.innerHeight - BUBBLE_SIZE - 24,
+  );
+}
+
+function panelPlacement(pos: { x: number; y: number }, compact: boolean) {
+  if (compact) {
+    return { left: 8, top: undefined as number | undefined, bottom: 8 };
+  }
+
+  const width = Math.min(PANEL_W, window.innerWidth - 24);
+  const height = Math.min(PANEL_H, window.innerHeight - 96);
+  const spaceAbove = pos.y;
+  const spaceBelow = window.innerHeight - pos.y - BUBBLE_SIZE;
+
+  let left = pos.x + BUBBLE_SIZE - width;
+  left = Math.min(Math.max(12, left), window.innerWidth - width - 12);
+
+  let top: number;
+  if (spaceAbove >= height + 12) {
+    top = pos.y - height - 12;
+  } else if (spaceBelow >= height + 12) {
+    top = pos.y + BUBBLE_SIZE + 12;
+  } else {
+    top = Math.max(12, (window.innerHeight - height) / 2);
+  }
+
+  return { left, top, bottom: undefined as number | undefined };
+}
+
 export const AIChatbot: React.FC<AIChatbotProps> = ({
   token,
   apiBase,
@@ -60,7 +118,22 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     { sender: 'bot', text: 'Hi! I am FindIT, your Findit AI assistant. Tell me what you lost or found, and I will search our system for matches!' },
   ]);
   const [inputValue, setInputValue] = useState('');
+  const [pos, setPos] = useState(loadAssistantPos);
+  const [dragging, setDragging] = useState(false);
+  const [viewport, setViewport] = useState(() => ({
+    w: window.innerWidth,
+    h: window.innerHeight,
+  }));
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const dragRef = useRef({
+    active: false,
+    moved: false,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
 
   // Per-item claim state and loading
   const [claimStates, setClaimStates] = useState<Record<number, ClaimState>>({});
@@ -77,6 +150,74 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
   }, [messages, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const onResize = () => {
+      setViewport({ w: window.innerWidth, h: window.innerHeight });
+      setPos((current) => clampAssistantPos(current.x, current.y));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const persistPos = (next: { x: number; y: number }) => {
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      active: true,
+      moved: false,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: pos.x,
+      originY: pos.y,
+    };
+  };
+
+  const handleFabPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current.active) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    if (!dragRef.current.moved && dx * dx + dy * dy < 36) return;
+    dragRef.current.moved = true;
+    setDragging(true);
+    setPos(clampAssistantPos(dragRef.current.originX + dx, dragRef.current.originY + dy));
+  };
+
+  const handleFabPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    if (dragRef.current.moved) {
+      setPos((current) => {
+        persistPos(current);
+        return current;
+      });
+    } else {
+      setIsOpen((open) => !open);
+    }
+    setDragging(false);
+  };
+
+  const compact = viewport.w <= 640;
+  const placement = panelPlacement(pos, compact);
 
   /** Scan a bot message and remember every item ID it mentions */
   const rememberMentionedIds = (text: string) => {
@@ -554,48 +695,93 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
   };
 
   return (
-    <div className={`chatbot-widget ${isOpen ? 'open' : ''}`} id="chatbotWidget">
-      {/* HEADER */}
-      <div className="chatbot-header" onClick={() => setIsOpen(!isOpen)}>
-        <span>FindIT Assistant AI</span>
-        <i id="chatbotToggleIcon" className={`fas ${isOpen ? 'fa-chevron-down' : 'fa-chevron-up'}`}></i>
-      </div>
-
-      {/* CHAT LOG */}
-      <div className="chatbot-body" ref={bodyRef}>
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`chat-message ${msg.sender === 'user' ? 'user' : 'bot'}`}
-          >
-            {msg.isPending ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 2px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.32s' }}></span>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.16s' }}></span>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both' }}></span>
-              </div>
-            ) : msg.contactCard ? (
-              renderContactCard(msg.contactCard)
-            ) : (
-              renderMessageText(msg.text)
-            )}
+    <>
+      {isOpen && (
+        <div
+          className="assistant-panel"
+          id="chatbotWidget"
+          role="dialog"
+          aria-label="FindIT Assistant"
+          style={{
+            left: placement.left,
+            top: placement.top,
+            bottom: placement.bottom,
+          }}
+        >
+          <div className="assistant-header">
+            <div className="assistant-avatar">
+              <i className="fas fa-robot"></i>
+            </div>
+            <div className="assistant-header-meta">
+              <strong>FindIT Assistant</strong>
+              <span>
+                <span className="assistant-online-dot" />
+                Always here to help
+              </span>
+            </div>
+            <div className="assistant-header-actions">
+              <button
+                type="button"
+                className="assistant-icon-btn"
+                aria-label="Close chat"
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
 
-      {/* FOOTER INPUT */}
-      <form className="chatbot-footer" onSubmit={handleSendMessage}>
-        <input
-          type="text"
-          id="chatbotInput"
-          placeholder="Ask me to search or check items..."
-          value={inputValue}
-          onChange={e => setInputValue(e.target.value)}
-        />
-        <button type="submit">
-          <i className="fas fa-paper-plane"></i>
-        </button>
-      </form>
-    </div>
+          <div className="chatbot-body" ref={bodyRef}>
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`chat-message ${msg.sender === 'user' ? 'user' : 'bot'}`}
+              >
+                {msg.isPending ? (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 2px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.32s' }}></span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.16s' }}></span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both' }}></span>
+                  </div>
+                ) : msg.contactCard ? (
+                  renderContactCard(msg.contactCard)
+                ) : (
+                  renderMessageText(msg.text)
+                )}
+              </div>
+            ))}
+          </div>
+
+          <form className="chatbot-footer" onSubmit={handleSendMessage}>
+            <input
+              ref={inputRef}
+              type="text"
+              id="chatbotInput"
+              placeholder="Type a message..."
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+            />
+            <button type="submit" aria-label="Send message">
+              <i className="fas fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+      )}
+
+      <button
+        type="button"
+        className={`assistant-fab${isOpen ? ' open' : ''}${dragging ? ' dragging' : ''}`}
+        style={{ left: pos.x, top: pos.y }}
+        aria-label={isOpen ? 'Close FindIT Assistant' : 'Open FindIT Assistant'}
+        title="Drag to move, tap to chat"
+        onPointerDown={handleFabPointerDown}
+        onPointerMove={handleFabPointerMove}
+        onPointerUp={handleFabPointerUp}
+        onPointerCancel={handleFabPointerUp}
+      >
+        <span className="assistant-fab-pulse" />
+        <i className={`fas ${isOpen ? 'fa-times' : 'fa-comments'}`}></i>
+      </button>
+    </>
   );
 };

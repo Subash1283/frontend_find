@@ -862,75 +862,56 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span>Dashboard</span>
           </NavLink>
 
-          <NavLink
-            to={DASHBOARD_PATHS.items}
-            className={({ isActive }) => `nav-item${isActive && statusFilter === 'all' ? ' active' : ''}`}
-            onClick={() => {
-              setStatusFilter('all');
-              setSidebarOpen(false);
-            }}
-          >
-            <span className="nav-icon"><i className="fas fa-box-open"></i></span>
-            <span>My Items</span>
-          </NavLink>
-
-          {/* Sub-menu under My Items for Return & Claim Statuses */}
-          <div style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '2px', margin: '2px 0 6px' }}>
-            <button
-              type="button"
-              className={`nav-item ${statusFilter === 'claimed' && viewMode === 'myItems' ? 'active' : ''}`}
-              style={{
-                width: '100%',
-                background: statusFilter === 'claimed' && viewMode === 'myItems' ? 'var(--accent-soft)' : 'none',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: '0.82rem',
-                padding: '8px 12px',
-                borderRadius: '8px',
+          <div className="nav-group">
+            <NavLink
+              to={DASHBOARD_PATHS.items}
+              className={({ isActive }) => {
+                const parentActive = isActive && statusFilter === 'all';
+                const inSection = isActive && statusFilter !== 'all';
+                return `nav-item${parentActive ? ' active' : inSection ? ' nav-item-in-section' : ''}`;
               }}
               onClick={() => {
-                setStatusFilter('claimed');
+                setStatusFilter('all');
                 setSidebarOpen(false);
-                navigate(DASHBOARD_PATHS.items);
               }}
             >
-              <span className="nav-icon" style={{ fontSize: '0.85rem' }}><i className="fas fa-truck-ramp-box" style={{ color: '#0284c7' }}></i></span>
-              <span style={{ fontSize: '0.82rem' }}>In Transit / Claimed</span>
-              {claimedCount > 0 && (
-                <span className="nav-badge" style={{ background: '#0284c7', color: '#fff', fontSize: '0.7rem' }}>
-                  {claimedCount}
-                </span>
-              )}
-            </button>
+              <span className="nav-icon"><i className="fas fa-box-open"></i></span>
+              <span>My Items</span>
+            </NavLink>
 
-            <button
-              type="button"
-              className={`nav-item ${statusFilter === 'solved' && viewMode === 'myItems' ? 'active' : ''}`}
-              style={{
-                width: '100%',
-                background: statusFilter === 'solved' && viewMode === 'myItems' ? 'var(--accent-soft)' : 'none',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: '0.82rem',
-                padding: '8px 12px',
-                borderRadius: '8px',
-              }}
-              onClick={() => {
-                setStatusFilter('solved');
-                setSidebarOpen(false);
-                navigate(DASHBOARD_PATHS.items);
-              }}
-            >
-              <span className="nav-icon" style={{ fontSize: '0.85rem' }}><i className="fas fa-check-circle" style={{ color: '#16a34a' }}></i></span>
-              <span style={{ fontSize: '0.82rem' }}>Returned / Received</span>
-              {returnedCount > 0 && (
-                <span className="nav-badge" style={{ background: '#16a34a', color: '#fff', fontSize: '0.7rem' }}>
-                  {returnedCount}
-                </span>
-              )}
-            </button>
+            <div className="nav-sub" role="group" aria-label="Item status filters">
+              <button
+                type="button"
+                className={`nav-item nav-item-sub${statusFilter === 'claimed' && viewMode === 'myItems' ? ' active' : ''}`}
+                onClick={() => {
+                  setStatusFilter('claimed');
+                  setSidebarOpen(false);
+                  navigate(DASHBOARD_PATHS.items);
+                }}
+              >
+                <span className="nav-icon nav-icon-transit"><i className="fas fa-truck-ramp-box"></i></span>
+                <span>In Transit / Claimed</span>
+                {claimedCount > 0 && (
+                  <span className="nav-badge nav-badge-blue">{claimedCount}</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className={`nav-item nav-item-sub nav-item-success${statusFilter === 'solved' && viewMode === 'myItems' ? ' active' : ''}`}
+                onClick={() => {
+                  setStatusFilter('solved');
+                  setSidebarOpen(false);
+                  navigate(DASHBOARD_PATHS.items);
+                }}
+              >
+                <span className="nav-icon nav-icon-success"><i className="fas fa-check-circle"></i></span>
+                <span>Returned / Received</span>
+                {returnedCount > 0 && (
+                  <span className="nav-badge nav-badge-green">{returnedCount}</span>
+                )}
+              </button>
+            </div>
           </div>
 
           <NavLink
