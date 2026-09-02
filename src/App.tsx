@@ -5,6 +5,7 @@ import { DASHBOARD_PATHS } from './lib/dashboardRoutes';
 import { AUTH_CALLBACK_PATH, parseUserFromOAuthQuery } from './lib/authRoutes';
 import { SuspendedAccountModal, parseSuspensionReason } from './components/SuspendedAccountModal';
 
+
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:3000';
 
 interface Toast {
@@ -245,6 +246,8 @@ function AppContent() {
           onClose={() => setGlobalSuspendedReason(null)}
         />
       )}
+
+
     </>
   );
 }

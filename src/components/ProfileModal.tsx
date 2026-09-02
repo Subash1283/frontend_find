@@ -3,6 +3,7 @@ import imageCompression from 'browser-image-compression';
 import { encryptFile } from '../utils/crypto';
 
 
+
 interface ProfileModalProps {
   token: string;
   apiBase: string;
@@ -23,6 +24,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   
   const [address, setAddress] = useState(currentUser?.address || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
+
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   // Password fields & visibility toggles
@@ -265,6 +267,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <label htmlFor="profile-phone">Phone Number</label>
                   <input id="profile-phone" name="phone" type="text" placeholder="e.g. 98XXXXXXXX" value={phone} onChange={e => setPhone(e.target.value)} />
                 </div>
+              </div>
+              <div className="form-row" style={{ marginTop: '12px' }}>
+
               </div>
 
               <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>

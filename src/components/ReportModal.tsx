@@ -181,11 +181,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           setTitle(data.title);
           populated = true;
         }
-        if (data.category && data.category !== 'Other' && data.category !== 'Documents' && category === 'Electronics') {
+        if (data.category && data.category !== 'Documents' && category === 'Electronics') {
           isAiCategoryChangeRef.current = true;
           setCategory(data.category);
           populated = true;
-        } else if (data.category && data.category !== 'Other' && data.category !== 'Documents' && category !== data.category) {
+        } else if (data.category && data.category !== 'Documents' && category !== data.category) {
           if (!title) {
              isAiCategoryChangeRef.current = true;
              setCategory(data.category);

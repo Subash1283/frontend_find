@@ -8,7 +8,7 @@ interface AdminPanelProps {
   openDeleteDialog: (id: number, name: string, itemType: 'item' | 'user') => void;
 }
 
-const SecureImage: React.FC<{ url: string; token: string; alt: string }> = ({ url, token, alt }) => {
+const SecureImage: React.FC<{ url: string; token: string; alt: string; onClick?: (src: string) => void }> = ({ url, token, alt, onClick }) => {
   const [src, setSrc] = useState<string>('');
   
   useEffect(() => {
@@ -33,7 +33,18 @@ const SecureImage: React.FC<{ url: string; token: string; alt: string }> = ({ ur
       </div>
     );
   }
-  return <img src={src} alt={alt} style={{ width: '100%', height: '240px', objectFit: 'contain', borderRadius: '8px', border: '1.5px solid var(--border)', background: '#f8fafc' }} />;
+  return (
+    <div 
+      style={{ position: 'relative', cursor: 'zoom-in', transition: 'transform 0.15s ease' }} 
+      onClick={() => onClick && onClick(src)}
+      title="Click to view full image"
+    >
+      <img src={src} alt={alt} style={{ width: '100%', height: '240px', objectFit: 'contain', borderRadius: '8px', border: '1.5px solid var(--border)', background: '#f8fafc' }} />
+      <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <i className="fas fa-search-plus"></i> Zoom Photo
+      </div>
+    </div>
+  );
 };
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -60,8 +71,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const popoverHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
-  // Document modal preview state
+  // Document modal preview state & Lightbox
   const [previewDocUser, setPreviewDocUser] = useState<any | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [confirmVerifyAction, setConfirmVerifyAction] = useState<{ id: number; status: 'verified' | 'rejected'; name?: string } | null>(null);
 
   // Reviews moderation state
   const [allReviews, setAllReviews] = useState<any[]>([]);
@@ -316,11 +329,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  // Verify single user status
-  const handleVerifyUser = async (id: number, status: 'verified' | 'rejected') => {
+  // Execute verification PATCH
+  const executeVerifyUser = async (id: number, status: 'verified' | 'rejected') => {
     const isApprove = status === 'verified';
-    if (!isApprove && !window.confirm("Reject this user's identity verification?")) return;
-
     try {
       const res = await fetch(`${apiBase}/users/${id}/verify`, {
         method: 'PATCH',
@@ -341,6 +352,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       }
     } catch {
       showToast('Error sending status PATCH', 'error');
+    }
+  };
+
+  // Verify single user status
+  const handleVerifyUser = (id: number, status: 'verified' | 'rejected', userName?: string) => {
+    if (status === 'rejected') {
+      setConfirmVerifyAction({ id, status, name: userName });
+    } else {
+      executeVerifyUser(id, status);
     }
   };
 
@@ -980,7 +1000,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             <button
                               className="icon-btn resolve"
                               style={{ padding: '4px 8px', marginRight: '4px' }}
-                              onClick={() => handleVerifyUser(u.id, 'verified')}
+                              onClick={() => handleVerifyUser(u.id, 'verified', u.name)}
                               title="Approve verification claim"
                             >
                               <i className="fas fa-check"></i>
@@ -988,7 +1008,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             <button
                               className="icon-btn del"
                               style={{ padding: '4px 8px', marginRight: '4px' }}
-                              onClick={() => handleVerifyUser(u.id, 'rejected')}
+                              onClick={() => handleVerifyUser(u.id, 'rejected', u.name)}
                               title="Reject verification claim"
                             >
                               <i className="fas fa-times"></i>
@@ -1111,7 +1131,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         if (!meta) return null;
 
         const status = getUserVerificationStatus(previewDocUser);
-        const isPending = status === 'pending';
 
         return (
           <div className="modal active" onClick={() => setPreviewDocUser(null)} style={{ zIndex: 3000 }}>
@@ -1123,77 +1142,141 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-soft)' }}>Claimant:</span>{' '}
-                <strong style={{ fontSize: '0.9rem' }}>{previewDocUser.name} ({previewDocUser.email})</strong>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-soft)', marginTop: '4px' }}>
-                  Document Category: <strong>{meta.label}</strong>
+              <div style={{ marginBottom: '16px', background: 'var(--surface-2)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-soft)' }}>User Account:</span>{' '}
+                    <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{previewDocUser.name}</strong> ({previewDocUser.email})
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-soft)' }}>Status:</span>{' '}
+                    <strong style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: status === 'verified' ? 'var(--found)' : status === 'pending' ? '#b45309' : 'var(--lost)' }}>{status}</strong>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '6px', fontSize: '0.82rem', color: 'var(--text-soft)', flexWrap: 'wrap' }}>
+                  <div>Account Name: <strong style={{ color: 'var(--text-main)' }}>{previewDocUser.name}</strong></div>
+                  <div>Account Email: <strong style={{ color: 'var(--text-main)' }}>{previewDocUser.email}</strong></div>
+                  <div>Role: <strong style={{ color: 'var(--text-main)', textTransform: 'capitalize' }}>{previewDocUser.role}</strong></div>
+                  <div>Document Category: <strong style={{ color: 'var(--text-main)' }}>{meta.label}</strong></div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <div style={{ flex: 1, minWidth: '260px', textAlign: 'center' }}>
-                  <label style={{ marginBottom: '6px', display: 'block' }}>Front Page Scan</label>
-                  <SecureImage url={meta.frontUrl} token={token} alt="Front page document preview" />
+                  <label style={{ marginBottom: '6px', display: 'block', fontSize: '0.85rem', fontWeight: 600 }}>Front Page Scan</label>
+                  <SecureImage url={meta.frontUrl} token={token} alt="Front page document preview" onClick={(src) => setLightboxImage(src)} />
                 </div>
 
                 {meta.hasBack && meta.backUrl && (
                   <div style={{ flex: 1, minWidth: '260px', textAlign: 'center' }}>
-                    <label style={{ marginBottom: '6px', display: 'block' }}>Back Page Scan</label>
-                    <SecureImage url={meta.backUrl} token={token} alt="Back page document preview" />
+                    <label style={{ marginBottom: '6px', display: 'block', fontSize: '0.85rem', fontWeight: 600 }}>Back Page Scan</label>
+                    <SecureImage url={meta.backUrl} token={token} alt="Back page document preview" onClick={(src) => setLightboxImage(src)} />
                   </div>
                 )}
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-                {isPending ? (
-                  <>
-                    <button
-                      className="btn-primary"
-                      style={{ flex: 1, justifyContent: 'center' }}
-                      onClick={() => {
-                        handleVerifyUser(previewDocUser.id, 'verified');
-                        setPreviewDocUser(null);
-                      }}
-                    >
-                      Approve Verification
-                    </button>
-                    <button
-                      className="btn-primary"
-                      style={{ flex: 1, background: 'var(--lost-bg)', color: 'var(--lost)', boxShadow: 'none', justifyContent: 'center' }}
-                      onClick={() => {
-                        handleVerifyUser(previewDocUser.id, 'rejected');
-                        setPreviewDocUser(null);
-                      }}
-                    >
-                      Reject & Delete Claims
-                    </button>
-                  </>
-                ) : (
-                  <div style={{ 
-                    flex: 1, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    background: status === 'verified' ? 'var(--found-bg)' : 'var(--surface-2)',
-                    color: status === 'verified' ? 'var(--found)' : 'var(--text-soft)',
-                    fontWeight: 700,
-                    border: `1px solid ${status === 'verified' ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`
-                  }}>
-                    {status === 'verified' ? (
-                      <><i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i> Verified User</>
-                    ) : (
-                      <><i className="fas fa-times-circle" style={{ marginRight: '8px' }}></i> Application Rejected</>
-                    )}
-                  </div>
-                )}
+                <button
+                  className="btn-primary"
+                  style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+                  onClick={() => {
+                    handleVerifyUser(previewDocUser.id, 'verified', previewDocUser.name);
+                    setPreviewDocUser(null);
+                  }}
+                >
+                  <i className="fas fa-check-circle" style={{ marginRight: '6px' }}></i> Approve Verification
+                </button>
+                <button
+                  className="btn-primary"
+                  style={{ flex: 1, background: 'var(--lost-bg)', color: 'var(--lost)', border: '1px solid rgba(239,68,68,0.3)', boxShadow: 'none', justifyContent: 'center', padding: '12px' }}
+                  onClick={() => {
+                    handleVerifyUser(previewDocUser.id, 'rejected', previewDocUser.name);
+                    setPreviewDocUser(null);
+                  }}
+                >
+                  <i className="fas fa-times-circle" style={{ marginRight: '6px' }}></i> Reject Application
+                </button>
               </div>
             </div>
           </div>
         );
       })()}
+
+      {/* FULL-SCREEN LIGHTBOX IMAGE MODAL */}
+      {lightboxImage && (
+        <div 
+          className="modal active" 
+          onClick={() => setLightboxImage(null)} 
+          style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+        >
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+            <button 
+              onClick={() => setLightboxImage(null)} 
+              style={{ position: 'absolute', top: '-40px', right: '0', background: 'transparent', border: 'none', color: '#fff', fontSize: '2rem', cursor: 'pointer' }}
+            >
+              &times;
+            </button>
+            <img src={lightboxImage} alt="Expanded document scan" style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM REJECT / VERIFY CONFIRMATION DIALOG MODAL */}
+      {confirmVerifyAction && (
+        <div 
+          className="modal active" 
+          onClick={() => setConfirmVerifyAction(null)} 
+          style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+        >
+          <div 
+            className="modal-card" 
+            onClick={e => e.stopPropagation()} 
+            style={{ maxWidth: '420px', width: '100%', padding: '28px', textAlign: 'center', borderRadius: '18px', background: 'var(--surface)', border: '1px solid var(--border)' }}
+          >
+            <div style={{ fontSize: '3rem', color: confirmVerifyAction.status === 'rejected' ? 'var(--lost, #ef4444)' : 'var(--found, #10b981)', marginBottom: '12px' }}>
+              <i className={confirmVerifyAction.status === 'rejected' ? 'fas fa-times-circle' : 'fas fa-check-circle'}></i>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 10px', fontFamily: 'var(--font-heading)' }}>
+              {confirmVerifyAction.status === 'rejected' ? 'Reject Identity Verification?' : 'Approve Identity Verification?'}
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-soft)', lineHeight: 1.5, marginBottom: '24px' }}>
+              {confirmVerifyAction.status === 'rejected'
+                ? `Are you sure you want to reject identity verification for ${confirmVerifyAction.name ? `"${confirmVerifyAction.name}"` : 'this user'}? Their verification status will be updated to rejected.`
+                : `Approve identity verification for ${confirmVerifyAction.name ? `"${confirmVerifyAction.name}"` : 'this user'}?`
+              }
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                type="button"
+                className="btn-primary" 
+                onClick={() => setConfirmVerifyAction(null)} 
+                style={{ flex: 1, background: 'var(--surface-2)', color: 'var(--text-main)', border: '1px solid var(--border)', justifyContent: 'center', padding: '10px 16px' }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                className="btn-primary" 
+                onClick={() => {
+                  executeVerifyUser(confirmVerifyAction.id, confirmVerifyAction.status);
+                  setConfirmVerifyAction(null);
+                }} 
+                style={{ 
+                  flex: 1, 
+                  background: confirmVerifyAction.status === 'rejected' ? 'var(--lost, #ef4444)' : 'var(--found, #10b981)', 
+                  color: '#fff', 
+                  justifyContent: 'center', 
+                  padding: '10px 16px',
+                  border: 'none',
+                  boxShadow: confirmVerifyAction.status === 'rejected' ? '0 4px 14px rgba(239, 68, 68, 0.3)' : '0 4px 14px rgba(16, 185, 129, 0.3)',
+                }}
+              >
+                {confirmVerifyAction.status === 'rejected' ? 'Yes, Reject' : 'Yes, Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/*REVIEWS  */}
       {activeTab === 'reviews' && (

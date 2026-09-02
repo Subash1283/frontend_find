@@ -47,6 +47,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [viewMode, setViewMode] = useState<DashboardView>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [items, setItems] = useState<any[]>([]);
+  // Always-loaded list of the current user's own items — used for sidebar stats
+  const [myItems, setMyItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'lost' | 'found' | 'claimed' | 'solved'>('all');
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -325,6 +327,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [apiBase, viewMode, token, showToast]);
 
+  // Always load the current user's own items for sidebar stats (independent of view)
+  const loadMyItems = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiBase}/items/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyItems(data);
+      }
+    } catch {
+      // Silent — sidebar stats are non-critical
+    }
+  }, [apiBase, token]);
+
   // Fetch Notifications
   const fetchNotifications = useCallback(async () => {
     try {
@@ -486,6 +503,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const itemsInterval = setInterval(loadItems, 20000);
     return () => clearInterval(itemsInterval);
   }, [viewMode, token]);
+
+  // Always keep myItems up-to-date for sidebar stats regardless of view
+  useEffect(() => {
+    loadMyItems();
+    const myItemsInterval = setInterval(loadMyItems, 30000);
+    return () => clearInterval(myItemsInterval);
+  }, [token]);
 
   const fetchUser = async () => {
     try {
@@ -770,9 +794,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   // Filter and search (memoized)
+  // When in myItems view, always source from myItems so status filters (claimed/solved)
+  // only reflect the current user's data — not the entire public feed.
   const filteredItems = useMemo(() => {
+    const sourceList = viewMode === 'myItems' ? myItems : items;
     const query = searchQuery.toLowerCase();
-    return items.filter(item => {
+    return sourceList.filter(item => {
       const matchSearch =
         item.title?.toLowerCase().includes(query) ||
         item.description?.toLowerCase().includes(query) ||
@@ -792,7 +819,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       return matchSearch && matchFilter;
     });
-  }, [items, searchQuery, statusFilter]);
+  }, [items, myItems, viewMode, searchQuery, statusFilter]);
 
   // Sensitive details blur control state helper
   const [revealedSensitives, setRevealedSensitives] = useState<{ [key: number]: boolean }>({});
@@ -802,18 +829,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
 
   // Stats computation (memoized)
+  // activeCount/lostCount/foundCount reflect the current view (public or mine)
+  // claimedCount/returnedCount ALWAYS use myItems so the sidebar only shows the current user's data
   const { activeCount, lostCount, foundCount, claimedCount, returnedCount } = useMemo(() => ({
     activeCount: items.filter(i => (i.status || 'active') === 'active').length,
     lostCount: items.filter(i => i.type?.toLowerCase() === 'lost').length,
     foundCount: items.filter(i => i.type?.toLowerCase() === 'found').length,
-    claimedCount: items.filter(
+    claimedCount: myItems.filter(
       i =>
         i.status !== 'solved' &&
         (i.status === 'claimed' ||
           ['PENDING', 'APPROVED', 'RETURN_ARRANGED', 'ITEM_RECEIVED'].includes(i.activeClaim?.status)),
     ).length,
-    returnedCount: items.filter(i => i.status === 'solved').length,
-  }), [items]);
+    returnedCount: myItems.filter(i => i.status === 'solved').length,
+  }), [items, myItems]);
 
   const getVerificationStatusLabel = () => {
     const status = currentUser?.verificationStatus || (currentUser?.isVerified ? 'verified' : 'unverified');

@@ -4,6 +4,7 @@ import { SuspendedAccountModal, parseSuspensionReason } from './SuspendedAccount
 import { validateEmailAuthenticity, getEmailDomainSuggestions } from '../utils/emailValidation';
 
 
+
 import catElectronicsImg from '../assets/category_electronics.png';
 
 import dummyWallet from '../assets/dummy_wallet.jpg';
@@ -28,6 +29,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [successDialogContent, setSuccessDialogContent] = useState<{title: string, message: string} | null>(null);
   const [suspendedDialog, setSuspendedDialog] = useState<{ reason: string } | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('findit_dark_mode') === 'true');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // Login fields
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -40,6 +42,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   const [regName, setRegName] = useState('');
   const [regAddress, setRegAddress] = useState('');
   const [regEmail, setRegEmail] = useState('');
+
   const [regPassword, setRegPassword] = useState('');
   const [regConfirm, setRegConfirm] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -128,6 +131,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
   }, [isDarkMode]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
+
+  useEffect(() => {
+    const closeOnDesktop = () => {
+      if (window.innerWidth > 768) setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', closeOnDesktop);
+    return () => window.removeEventListener('resize', closeOnDesktop);
+  }, []);
 
 
   useEffect(() => {
@@ -443,6 +454,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
       const payload: any = { name, email, password };
       if (address) payload.address = address;
 
+
       const res = await fetch(`${apiBase}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -454,6 +466,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
         setLoginPassword('');
         setRegName('');
         setRegEmail('');
+
         setRegPassword('');
         setRegConfirm('');
         setRegAddress('');
@@ -694,6 +707,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
     setRegName('');
     setRegAddress('');
     setRegEmail('');
+
     setRegPassword('');
     setRegConfirm('');
     setShowRegPassword(false);
@@ -931,24 +945,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
       </div>
 
       {/* HEADER NAVBAR */}
-      <header className="landing-header">
+      <header className={`landing-header${isMobileMenuOpen ? ' menu-open' : ''}`}>
         <div className="landing-logo">
           <div className="logo-icon"><i className="fas fa-search"></i></div>
           <span>FINDIT</span>
         </div>
-        <nav className="landing-nav">
-          <a href="#home">Home</a>
-          <a href="#features">How It Works</a>
-          <a href="#categories">Categories</a>
-          <a href="#safety">Safety</a>
-          <a href="#about">About Us</a>
+
+        <nav id="landing-nav" className={`landing-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+          <a href="#home" onClick={() => setIsMobileMenuOpen(false)}>Home</a>
+          <a href="#features" onClick={() => setIsMobileMenuOpen(false)}>How It Works</a>
+          <a href="#categories" onClick={() => setIsMobileMenuOpen(false)}>Categories</a>
+          <a href="#safety" onClick={() => setIsMobileMenuOpen(false)}>Safety</a>
+          <a href="#about" onClick={() => setIsMobileMenuOpen(false)}>About Us</a>
+          <div className="landing-nav-mobile-cta">
+            <button className="nav-btn-login" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); setIsMobileMenuOpen(false); }}>Log In</button>
+            <button className="nav-btn-signup" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('register'); setIsMobileMenuOpen(false); }}>Sign Up</button>
+          </div>
         </nav>
         <div className="landing-nav-actions">
-          <button className="dark-mode-toggle" onClick={toggleDarkMode} title={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
+          <button type="button" className="dark-mode-toggle" onClick={toggleDarkMode} title={isDarkMode ? 'Light Mode' : 'Dark Mode'} aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
             <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
           </button>
-          <button className="nav-btn-login" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); }}>Log In</button>
-          <button className="nav-btn-signup" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('register'); }}>Sign Up</button>
+          <button className="nav-btn-login nav-btn-desktop" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('login'); setIsMobileMenuOpen(false); }}>Log In</button>
+          <button className="nav-btn-signup nav-btn-desktop" onClick={() => { clearFields(); setIsModalActive(true); setActiveTab('register'); setIsMobileMenuOpen(false); }}>Sign Up</button>
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="landing-nav"
+          >
+            <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+          </button>
         </div>
       </header>
 
@@ -1478,6 +1507,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
 
               <button
                 type="button"
+                className="landing-magic-link-btn"
                 onClick={handleSendMagicLink}
                 disabled={isSendingMagicLink || !loginEmail}
                 style={{
