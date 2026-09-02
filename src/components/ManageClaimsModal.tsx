@@ -492,11 +492,10 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
           style={{
             backgroundColor: 'rgba(15, 23, 42, 0.7)',
             backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
             zIndex: 13000,
             display: 'flex',
             alignItems: 'center',
-            justify-content: 'center',
+            justifyContent: 'center',
             animation: 'fadeIn 0.2s ease-out',
           }}
         >
@@ -523,7 +522,7 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
                 color: '#059669',
                 display: 'inline-flex',
                 alignItems: 'center',
-                justify-content: 'center',
+                justifyContent: 'center',
                 fontSize: '2rem',
                 marginBottom: '16px',
                 boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)',
@@ -568,7 +567,7 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justify-content: 'center',
+                  justifyContent: 'center',
                   gap: '12px',
                   flexWrap: 'wrap',
                 }}
@@ -584,7 +583,7 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
                     letterSpacing: '3px',
                     fontFamily: 'monospace',
                     boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
-                    userSelect: 'all',
+                    userSelect: 'all' as const,
                   }}
                 >
                   {approvedPopupData.code}
@@ -644,7 +643,7 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justify-content: 'center',
+                    justifyContent: 'center',
                     gap: '6px',
                     boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
                   }}
