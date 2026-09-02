@@ -126,7 +126,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'space-between', 
-                        marginTop: '4px',
+                        flexWrap: 'wrap',
+                        gap: '8px 10px',
+                        marginTop: '8px',
                         padding: '8px 12px',
                         background: '#ffffff',
                         borderRadius: '8px',
@@ -134,12 +136,28 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', textTransform: 'uppercase' }}>Code:</span>
-                        <strong style={{ fontSize: '1.1rem', color: '#2563eb', fontFamily: 'monospace', letterSpacing: '1px' }}>{code}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, minWidth: '0' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Code:</span>
+                        <strong 
+                          style={{ 
+                            fontSize: '0.98rem', 
+                            color: '#2563eb', 
+                            fontFamily: 'monospace', 
+                            letterSpacing: '0.5px', 
+                            whiteSpace: 'nowrap', 
+                            wordBreak: 'keep-all',
+                            overflowWrap: 'normal',
+                            background: '#eff6ff',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #bfdbfe'
+                          }}
+                        >
+                          {code}
+                        </strong>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0, marginLeft: 'auto' }}>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -148,7 +166,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                             if (showToast) showToast(`Copied ${code} to clipboard!`, 'success');
                           }}
                           style={{
-                            padding: '4px 10px',
+                            padding: '5px 10px',
                             borderRadius: '6px',
                             border: 'none',
                             background: '#059669',
@@ -159,6 +177,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
+                            whiteSpace: 'nowrap'
                           }}
                         >
                           <i className="fas fa-copy"></i> Copy
@@ -170,7 +189,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                             if (onOpenVerificationModal) onOpenVerificationModal(code, itemTitle, itemId);
                           }}
                           style={{
-                            padding: '4px 10px',
+                            padding: '5px 10px',
                             borderRadius: '6px',
                             border: '1px solid #2563eb',
                             background: '#eff6ff',
@@ -178,6 +197,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                             fontSize: '0.75rem',
                             fontWeight: 700,
                             cursor: 'pointer',
+                            whiteSpace: 'nowrap'
                           }}
                         >
                           View Popup
