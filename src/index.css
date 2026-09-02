@@ -2527,7 +2527,7 @@ a.sidebar-logo {
   backdrop-filter: blur(8px);
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   padding: 16px;
   animation: fadeIn 0.18s ease;
 }
@@ -2547,6 +2547,13 @@ a.sidebar-logo {
   box-shadow: var(--shadow-lg);
   animation: slideUp 0.22s ease;
   position: relative;
+}
+
+@media (max-width: 540px) {
+  .modal-card {
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
 }
 
 .modal-title {
@@ -2586,23 +2593,52 @@ a.sidebar-logo {
 .form-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 14px;
 }
 
 .form-group {
-  flex: 1;
-  min-width: 130px;
+  flex: 1 1 220px;
+  min-width: 220px;
+}
+
+@media (max-width: 540px) {
+  .form-group {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
 }
 
 label {
-  display: block;
-  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   color: var(--text-soft);
   margin-bottom: 6px;
+}
+
+label .label-subtext {
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-muted);
+}
+
+label .readonly-badge {
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
 }
 
 input,
@@ -2618,6 +2654,20 @@ textarea {
   outline: none;
   transition: all 0.2s;
   color: var(--text-main);
+  box-sizing: border-box;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #f8fafc;
+  color: #64748b;
+  opacity: 0.85;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 input:focus,

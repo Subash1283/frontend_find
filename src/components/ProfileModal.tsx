@@ -250,26 +250,33 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <form onSubmit={handleUpdateProfile}>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="profile-name">Full Name (Permanent)</label>
-                  <input id="profile-name" name="name" type="text" value={currentUser?.name || ''} disabled style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-primary)' }} />
+                  <label htmlFor="profile-name">
+                    <span>Full Name</span>
+                    <span className="readonly-badge">🔒 Permanent</span>
+                  </label>
+                  <input id="profile-name" name="name" type="text" value={currentUser?.name || ''} disabled title="Full Name is permanent" />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="profile-email">Email (Account ID)</label>
-                  <input id="profile-email" name="email" type="email" value={currentUser?.email || ''} disabled style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-primary)' }} />
+                  <label htmlFor="profile-email">
+                    <span>Email Address</span>
+                    <span className="readonly-badge">Account ID</span>
+                  </label>
+                  <input id="profile-email" name="email" type="email" value={currentUser?.email || ''} disabled title="Email is linked to your Account ID" />
                 </div>
               </div>
               <div className="form-row" style={{ marginTop: '12px' }}>
                 <div className="form-group">
-                  <label htmlFor="profile-address">Home Address</label>
+                  <label htmlFor="profile-address">
+                    <span>Home Address</span>
+                  </label>
                   <input id="profile-address" name="address" type="text" placeholder="e.g. Lalitpur, Nepal" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="profile-phone">Phone Number</label>
+                  <label htmlFor="profile-phone">
+                    <span>Phone Number</span>
+                  </label>
                   <input id="profile-phone" name="phone" type="text" placeholder="e.g. 98XXXXXXXX" value={phone} onChange={e => setPhone(e.target.value)} />
                 </div>
-              </div>
-              <div className="form-row" style={{ marginTop: '12px' }}>
-
               </div>
 
               <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -287,8 +294,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </h4>
             <form onSubmit={handleChangePassword}>
               <div className="form-row">
-                <div className="form-group" style={{ position: 'relative' }}>
-                  <label htmlFor="profile-current-password">Current Password</label>
+                <div className="form-group">
+                  <label htmlFor="profile-current-password">
+                    <span>Current Password</span>
+                  </label>
                   <div style={{ position: 'relative' }}>
                     <input 
                       id="profile-current-password" 
@@ -296,12 +305,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       type={showCurrentPass ? 'text' : 'password'} 
                       value={currentPassword} 
                       onChange={e => setCurrentPassword(e.target.value)} 
+                      placeholder="Enter current password"
                       style={{ paddingRight: '40px' }}
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPass(!showCurrentPass)}
-                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '0.9rem' }}
+                      aria-label="Toggle current password visibility"
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', padding: '6px' }}
                     >
                       <i className={showCurrentPass ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
                     </button>
@@ -309,8 +320,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
               </div>
               <div className="form-row" style={{ marginTop: '12px' }}>
-                <div className="form-group" style={{ position: 'relative' }}>
-                  <label htmlFor="profile-new-password">New Password (min 6 chars)</label>
+                <div className="form-group">
+                  <label htmlFor="profile-new-password">
+                    <span>New Password</span>
+                    <span className="label-subtext">(min 6 chars)</span>
+                  </label>
                   <div style={{ position: 'relative' }}>
                     <input 
                       id="profile-new-password" 
@@ -318,19 +332,23 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       type={showNewPass ? 'text' : 'password'} 
                       value={newPassword} 
                       onChange={e => setNewPassword(e.target.value)} 
+                      placeholder="New password"
                       style={{ paddingRight: '40px' }}
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPass(!showNewPass)}
-                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '0.9rem' }}
+                      aria-label="Toggle new password visibility"
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', padding: '6px' }}
                     >
                       <i className={showNewPass ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
                     </button>
                   </div>
                 </div>
-                <div className="form-group" style={{ position: 'relative' }}>
-                  <label htmlFor="profile-confirm-password">Confirm Password</label>
+                <div className="form-group">
+                  <label htmlFor="profile-confirm-password">
+                    <span>Confirm Password</span>
+                  </label>
                   <div style={{ position: 'relative' }}>
                     <input 
                       id="profile-confirm-password" 
@@ -338,12 +356,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       type={showConfirmPass ? 'text' : 'password'} 
                       value={confirmPassword} 
                       onChange={e => setConfirmPassword(e.target.value)} 
+                      placeholder="Confirm new password"
                       style={{ paddingRight: '40px' }}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPass(!showConfirmPass)}
-                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '0.9rem' }}
+                      aria-label="Toggle confirm password visibility"
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-soft)', padding: '6px' }}
                     >
                       <i className={showConfirmPass ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
                     </button>
