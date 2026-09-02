@@ -1511,22 +1511,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
                 onClick={handleSendMagicLink}
                 disabled={isSendingMagicLink || !loginEmail}
                 style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  color: '#1d4ed8',
-                  fontWeight: 700,
-                  fontSize: '0.88rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
                   cursor: loginEmail ? 'pointer' : 'not-allowed',
                   opacity: loginEmail ? 1 : 0.65,
-                  transition: 'all 0.2s',
-                  marginBottom: '14px',
                 }}
               >
                 <i className="fas fa-envelope-open-text" style={{ fontSize: '1.05rem', color: '#2563eb' }}></i>

@@ -3089,20 +3089,23 @@ input {
   }
 
   .landing-modal {
-    padding: max(8px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
-    align-items: flex-start;
+    padding: max(6px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+    align-items: center;
+    justify-content: center;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
   .landing-modal-container {
     width: 100%;
+    max-width: 440px;
     min-height: 0;
-    max-height: none;
-    margin: auto 0;
+    max-height: min(90dvh, 90vh);
+    margin: auto;
     flex-direction: column;
     overflow: hidden;
     border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
   }
 
   .landing-modal-left {
@@ -3112,54 +3115,84 @@ input {
   .landing-modal-close {
     top: 10px;
     right: 10px;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
   }
 
   .landing-modal-right {
-    flex: none;
+    flex: 1;
     width: 100%;
-    max-height: min(92dvh, 92vh);
+    max-height: min(90dvh, 90vh);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 1.35rem 1.1rem 1.15rem;
+    padding: 1.1rem 1rem 0.9rem;
   }
 
   .landing-modal-right h2 {
-    font-size: 1.35rem;
+    font-size: 1.2rem !important;
+    margin-bottom: 2px !important;
   }
 
   .form-sub-heading {
-    margin-bottom: 0.85rem;
-    font-size: 0.82rem;
+    margin-bottom: 0.5rem !important;
+    font-size: 0.78rem !important;
   }
 
   .form-group-field {
-    margin-bottom: 0.65rem;
-    gap: 4px;
+    margin-bottom: 0.45rem !important;
+    gap: 3px !important;
+  }
+
+  .form-group-field label {
+    font-size: 0.75rem !important;
   }
 
   .landing-input-field {
-    padding: 10px 12px;
-    font-size: 16px;
+    padding: 8px 11px !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important;
+  }
+
+  .password-wrapper .eye-toggle {
+    right: 10px;
+    font-size: 0.85rem;
   }
 
   .landing-forgot-link {
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.5rem !important;
+    font-size: 0.75rem !important;
   }
 
   .landing-submit-btn {
-    padding: 11px 16px;
+    padding: 9px 14px !important;
+    font-size: 0.84rem !important;
+    border-radius: 8px !important;
+    margin-top: 0.2rem !important;
   }
 
   .divider-row {
-    margin: 0.75rem 0;
+    margin: 0.45rem 0 !important;
+    font-size: 0.72rem !important;
   }
 
   .landing-magic-link-btn {
-    padding: 10px 12px !important;
-    margin-bottom: 8px !important;
-    font-size: 0.8rem !important;
+    width: 100%;
+    padding: 8px 10px !important;
+    margin-bottom: 6px !important;
+    font-size: 0.78rem !important;
+    border-radius: 8px !important;
+  }
+
+  .landing-google-btn {
+    padding: 8px 12px !important;
+    font-size: 0.82rem !important;
+    border-radius: 8px !important;
+  }
+
+  .modal-footer-text {
+    margin-top: 0.5rem !important;
+    font-size: 0.76rem !important;
   }
 
   .footer-top-grid {
