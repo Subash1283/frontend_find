@@ -33,6 +33,12 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
   }>(null);
 
 
+  const [approvedPopupData, setApprovedPopupData] = useState<{
+    code: string;
+    claimantName: string;
+    claimantId?: number;
+  } | null>(null);
+
   useEffect(() => {
     fetchClaims();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,10 +95,20 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
             const claim = claims.find((c) => c.id === requestId);
             const claimantId = claim?.userId ?? claim?.user?.id;
             const claimantName = claim?.user?.name || 'Claimant';
-            if (onOpenChat && claimantId) {
+            const code = data.verificationCode || data.claimRequest?.verificationCode || claim?.verificationCode;
+
+            if (code) {
+              setApprovedPopupData({
+                code,
+                claimantName,
+                claimantId: claimantId ? Number(claimantId) : undefined,
+              });
+            } else if (onOpenChat && claimantId) {
               onOpenChat(itemId, `${claimantName} - ${itemTitle || 'Item'}`, Number(claimantId));
+              onClose();
+            } else {
+              onClose();
             }
-            onClose();
           } else {
             fetchClaims();
           }
@@ -459,6 +475,202 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
                 ) : (
                   <><i className="fas fa-times" style={{ marginRight: '6px' }}></i>Yes, Reject</>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VERIFICATION CODE POPUP NOTIFICATION MODAL */}
+      {approvedPopupData && (
+        <div
+          className="modal active"
+          onClick={() => {
+            setApprovedPopupData(null);
+            onClose();
+          }}
+          style={{
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            zIndex: 13000,
+            display: 'flex',
+            alignItems: 'center',
+            justify-content: 'center',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '480px',
+              width: '90%',
+              padding: '30px',
+              borderRadius: '20px',
+              textAlign: 'center',
+              background: '#ffffff',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <div
+              style={{
+                width: '68px',
+                height: '68px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #dcfce7 0%, #a7f3d0 100%)',
+                color: '#059669',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justify-content: 'center',
+                fontSize: '2rem',
+                marginBottom: '16px',
+                boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)',
+              }}
+            >
+              <i className="fas fa-shield-check"></i>
+            </div>
+
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>
+              Claim Approved & Code Generated!
+            </h3>
+
+            <p style={{ margin: '0 0 20px', fontSize: '0.92rem', color: '#475569', lineHeight: 1.55 }}>
+              You have approved the claim request by <strong style={{ color: '#0f172a' }}>{approvedPopupData.claimantName}</strong> for <strong style={{ color: '#0f172a' }}>"{itemTitle || 'Item'}"</strong>.
+            </p>
+
+            <div
+              style={{
+                backgroundColor: '#ecfdf5',
+                border: '2px dashed #34d399',
+                borderRadius: '16px',
+                padding: '20px',
+                marginBottom: '20px',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.08)',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  color: '#047857',
+                  display: 'block',
+                  marginBottom: '8px',
+                }}
+              >
+                Return Verification Code
+              </span>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justify-content: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    color: '#ffffff',
+                    padding: '10px 20px',
+                    borderRadius: '12px',
+                    fontSize: '1.45rem',
+                    fontWeight: 800,
+                    letterSpacing: '3px',
+                    fontFamily: 'monospace',
+                    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                    userSelect: 'all',
+                  }}
+                >
+                  {approvedPopupData.code}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(approvedPopupData.code);
+                    showToast(`Verification code ${approvedPopupData.code} copied!`, 'success');
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: '#047857',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(4, 120, 87, 0.25)',
+                  }}
+                >
+                  <i className="fas fa-copy"></i> Copy Code
+                </button>
+              </div>
+            </div>
+
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '12px 14px', marginBottom: '20px', textAlign: 'left', fontSize: '0.82rem', color: '#1e40af', lineHeight: 1.45 }}>
+              <i className="fas fa-info-circle" style={{ marginRight: '6px', color: '#3b82f6' }}></i>
+              <strong>Handover Verification:</strong> Use this code during item handover to verify identity. The claimant has also received this code in their notifications.
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {onOpenChat && approvedPopupData.claimantId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cid = approvedPopupData.claimantId!;
+                    const cname = approvedPopupData.claimantName;
+                    setApprovedPopupData(null);
+                    onClose();
+                    onOpenChat(itemId, `${cname} - ${itemTitle || 'Item'}`, cid);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify-content: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                  }}
+                >
+                  <i className="fas fa-comments"></i> Chat with Claimant
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setApprovedPopupData(null);
+                  onClose();
+                }}
+                style={{
+                  flex: onOpenChat && approvedPopupData.claimantId ? '0 0 auto' : 1,
+                  padding: '12px 20px',
+                  borderRadius: '12px',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  color: '#334155',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
               </button>
             </div>
           </div>
