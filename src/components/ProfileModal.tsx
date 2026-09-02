@@ -252,7 +252,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <div className="form-group">
                   <label htmlFor="profile-name">
                     <span>Full Name</span>
-                    <span className="readonly-badge">🔒 Permanent</span>
+                    <span className="readonly-badge"> Permanent</span>
                   </label>
                   <input id="profile-name" name="name" type="text" value={currentUser?.name || ''} disabled title="Full Name is permanent" />
                 </div>
@@ -323,7 +323,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <div className="form-group">
                   <label htmlFor="profile-new-password">
                     <span>New Password</span>
-                    <span className="label-subtext">(min 6 chars)</span>
+                    <span className="label-subtext">(min 8 chars)</span>
                   </label>
                   <div style={{ position: 'relative' }}>
                     <input 
