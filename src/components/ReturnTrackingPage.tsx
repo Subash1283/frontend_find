@@ -24,6 +24,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
 
   useEffect(() => {
     fetchTrackingData();
@@ -83,6 +84,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
       });
       const result = await res.json();
       if (res.ok) {
+        showToast('Item received successfully! Handover verified.', 'success');
         setShowSuccessModal(true);
         fetchTrackingData();
       } else {
@@ -95,12 +97,8 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
     }
   };
 
-  const handleRevokeClaim = async () => {
+  const handleConfirmRevokeClaim = async () => {
     if (!claimId) return;
-    const claimantName = data?.claim?.user?.name || 'this claimant';
-    if (!window.confirm(`Revoke the claim by ${claimantName}? The item will be available again so other users can claim it.`)) {
-      return;
-    }
     setActionLoading(true);
     try {
       const res = await fetch(`${apiBase}/items/claim-requests/${claimId}`, {
@@ -114,6 +112,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
       const result = await res.json();
       if (res.ok) {
         showToast(result.message || 'Claim revoked. Other users can claim this item again.', 'success');
+        setShowRevokeModal(false);
         fetchTrackingData();
       } else {
         showToast(result.message || 'Failed to revoke claim', 'error');
@@ -679,7 +678,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
                   </div>
                   <button
                     type="button"
-                    onClick={handleRevokeClaim}
+                    onClick={() => setShowRevokeModal(true)}
                     disabled={actionLoading}
                     style={{
                       padding: '10px 18px',
@@ -742,6 +741,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
         {showSuccessModal && (
           <div
             className="modal active"
+            onClick={() => setShowSuccessModal(false)}
             style={{
               backgroundColor: 'rgba(15, 23, 42, 0.65)',
               backdropFilter: 'blur(6px)',
@@ -754,9 +754,10 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
           >
             <div
               className="modal-card"
+              onClick={(e) => e.stopPropagation()}
               style={{
-                maxWidth: '440px',
-                width: '100%',
+                maxWidth: '460px',
+                width: '90%',
                 padding: '32px 24px',
                 textAlign: 'center',
                 borderRadius: '20px',
@@ -779,6 +780,122 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
               >
                 Done
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* REVOKE CLAIM CONFIRMATION DIALOG MODAL */}
+        {showRevokeModal && (
+          <div
+            className="modal active"
+            onClick={() => !actionLoading && setShowRevokeModal(false)}
+            style={{
+              backgroundColor: 'rgba(15, 23, 42, 0.7)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 13000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'fadeIn 0.2s ease-out',
+              padding: '16px',
+            }}
+          >
+            <div
+              className="modal-card"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: '460px',
+                width: '100%',
+                padding: '28px',
+                borderRadius: '20px',
+                textAlign: 'center',
+                background: '#ffffff',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)',
+                  color: '#ea580c',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.8rem',
+                  marginBottom: '16px',
+                  boxShadow: '0 8px 20px rgba(234, 88, 12, 0.25)',
+                }}
+              >
+                <i className="fas fa-undo"></i>
+              </div>
+
+              <h3 style={{ margin: '0 0 8px', fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>
+                Revoke Claim Confirmation
+              </h3>
+
+              <p style={{ margin: '0 0 16px', fontSize: '0.92rem', color: '#475569', lineHeight: 1.55 }}>
+                Are you sure you want to revoke the claim approved for <strong style={{ color: '#0f172a' }}>{claim?.user?.name || 'this claimant'}</strong>?
+              </p>
+
+              <div style={{ background: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '12px', padding: '12px 14px', marginBottom: '22px', textAlign: 'left', fontSize: '0.82rem', color: '#9a3412', lineHeight: 1.45 }}>
+                <i className="fas fa-exclamation-triangle" style={{ marginRight: '6px', color: '#ea580c' }}></i>
+                <strong>Note:</strong> The item status will reset so other users can submit claim requests. Any active return verification code for this claim will be invalidated.
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRevokeModal(false)}
+                  disabled={actionLoading}
+                  style={{
+                    flex: 1,
+                    padding: '11px 18px',
+                    borderRadius: '12px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    color: '#334155',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRevokeClaim}
+                  disabled={actionLoading}
+                  style={{
+                    flex: 1.2,
+                    padding: '11px 18px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: actionLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(234, 88, 12, 0.35)',
+                  }}
+                >
+                  {actionLoading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i> Revoking...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-undo"></i> Yes, Revoke Claim
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
