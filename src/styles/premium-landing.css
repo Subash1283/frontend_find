@@ -999,22 +999,23 @@ input {
   left: -60%;
   width: 40%;
   height: 200%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.15),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.15),
+      transparent);
   transform: skewX(-20deg);
   animation: btnSweep 5s ease-in-out infinite;
 }
 
 @keyframes btnGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow:
       0 6px 18px rgba(37, 99, 235, 0.25),
       0 0 20px rgba(37, 99, 235, 0.15);
   }
+
   50% {
     box-shadow:
       0 8px 28px rgba(37, 99, 235, 0.35),
@@ -1024,13 +1025,27 @@ input {
 }
 
 @keyframes btnShimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @keyframes btnSweep {
-  0%, 75% { left: -60%; }
-  100% { left: 120%; }
+
+  0%,
+  75% {
+    left: -60%;
+  }
+
+  100% {
+    left: 120%;
+  }
 }
 
 .premium-btn-primary:hover {
@@ -3963,9 +3978,7 @@ input {
 }
 
 
-/* ==========================================================================
-   HERO SEARCH BAR
-   ========================================================================== */
+
 
 .hero-search-bar {
   width: 100%;
@@ -4423,7 +4436,7 @@ input {
       transparent 40%,
       rgba(15, 23, 42, 0.8) 75%,
       #0f172a 100%),
-    linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
+    linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
     url('/landing-hero.jpg') !important;
   filter: none !important;
 }
