@@ -223,7 +223,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', padding: '28px', borderRadius: '20px' }}>
         <div className="modal-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', paddingBottom: '14px', borderBottom: '1px solid var(--border-soft)' }}>
           <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>⚙️</span> Profile & Verification Control
+            <span>⚙️</span> Profile And  Verification Control
           </h3>
           <button 
             type="button"
