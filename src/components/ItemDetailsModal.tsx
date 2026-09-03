@@ -435,56 +435,61 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           )}
 
           {/* Reporter details */}
+          {/* ── Footer: Reporter Info + Action Buttons ── */}
           <div
             style={{
-              marginTop: '10px',
-              paddingTop: '16px',
+              marginTop: '14px',
+              paddingTop: '18px',
               borderTop: '1px solid var(--border-soft)',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              flexDirection: 'column',
+              gap: '14px',
             }}
           >
+            {/* Reporter Info Row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div
                 style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '40px',
+                  height: '40px',
                   borderRadius: '50%',
-                  background: 'var(--accent-soft)',
+                  background: 'linear-gradient(135deg, var(--accent-soft), rgba(6, 182, 212, 0.15))',
                   color: 'var(--accent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
-                  fontSize: '0.9rem',
+                  fontSize: '0.95rem',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(6, 182, 212, 0.12)',
                 }}
               >
                 {(item.user?.name || '?').charAt(0).toUpperCase()}
               </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-soft)', display: 'block' }}>Reported By</span>
-                <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ minWidth: 0 }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-soft)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 500 }}>Reported By</span>
+                <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {item.user?.name || 'Unknown'}
                   {reporterStats && (
                     <span 
-                      style={{ fontSize: '0.75rem', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '2px', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ fontSize: '0.73rem', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600, cursor: 'pointer', background: 'rgba(245, 158, 11, 0.08)', padding: '2px 8px', borderRadius: '10px', transition: 'background 0.2s' }}
                       onClick={(e) => { e.stopPropagation(); setShowUserReviews(true); }}
                       title="Click to view reviews"
                     >
-                      <i className="fas fa-star"></i> {reporterStats.totalReviews > 0 ? `${reporterStats.averageRating} (${reporterStats.totalReviews})` : 'New (0)'}
+                      <i className="fas fa-star" style={{ fontSize: '0.65rem' }}></i> {reporterStats.totalReviews > 0 ? `${reporterStats.averageRating} (${reporterStats.totalReviews})` : 'New (0)'}
                     </span>
                   )}
                 </strong>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Action Buttons Row */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               {isResolved && currentUserId && item.user?.id && Number(currentUserId) !== Number(item.user.id) && (
                 <button
                   type="button"
                   className="btn-primary"
-                  style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '4px' }}
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontWeight: 600, boxShadow: '0 3px 10px rgba(245, 158, 11, 0.3)', transition: 'all 0.2s ease' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowReviewModal(true);
@@ -497,7 +502,7 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 <button
                   type="button"
                   className="btn-outline"
-                  style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '4px', borderColor: '#8b5cf6', color: '#8b5cf6' }}
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', borderColor: '#8b5cf6', color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontWeight: 600, background: 'rgba(139, 92, 246, 0.06)', transition: 'all 0.2s ease' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowPlatformReviewModal(true);
@@ -510,7 +515,7 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 <button
                   type="button"
                   className="btn-primary"
-                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '6px', background: '#0ea5e9', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontWeight: 600, boxShadow: '0 3px 10px rgba(14, 165, 233, 0.3)', transition: 'all 0.2s ease' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowRequestClaimModal(true);
@@ -520,11 +525,11 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   <i className="fas fa-hand-paper"></i> Request Claim
                 </button>
               )}
-              {activeClaim && onOpenTracking && (
+              {activeClaim && onOpenTracking && currentUserId && item.user?.id && Number(currentUserId) !== Number(item.user.id) && (
                 <button
                   type="button"
                   className="btn-primary"
-                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '6px', background: '#0284c7', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', background: 'linear-gradient(135deg, #0284c7, #0369a1)', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontWeight: 600, boxShadow: '0 3px 10px rgba(2, 132, 199, 0.3)', transition: 'all 0.2s ease' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onOpenTracking(activeClaim.id);
@@ -534,11 +539,11 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   <i className="fas fa-truck-ramp-box"></i> Track Status
                 </button>
               )}
-              {item.status === 'claimed' && currentUserId && item.claimedById === currentUserId && item.user?.id && onOpenChat && (
+              {item.status === 'claimed' && currentUserId && Number(item.claimedById) === Number(currentUserId) && item.user?.id && Number(currentUserId) !== Number(item.user.id) && onOpenChat && (
                 <button
                   type="button"
                   className="btn-primary"
-                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '6px', background: '#10b981', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontWeight: 600, boxShadow: '0 3px 10px rgba(16, 185, 129, 0.3)', transition: 'all 0.2s ease' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onOpenChat(item.id, `Chat about ${item.title}`, item.user.id);
@@ -552,20 +557,20 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 <button
                   type="button"
                   className="btn-primary"
-                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '6px', background: '#8b5cf6', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontWeight: 600, boxShadow: '0 3px 10px rgba(139, 92, 246, 0.3)', transition: 'all 0.2s ease' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowManageClaimsModal(true);
                   }}
                 >
-                  <i className="fas fa-tasks"></i> Manage Claim Requests
+                  <i className="fas fa-tasks"></i> Manage Claims
                 </button>
               )}
               {currentUserId && item.user?.id && Number(currentUserId) !== Number(item.user.id) && (
                 <button
                   type="button"
                   className="btn-outline"
-                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '6px', borderColor: '#ef4444', color: '#ef4444', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: '1.5px solid #ef4444', color: '#ef4444', background: 'rgba(239, 68, 68, 0.04)', display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s ease' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowDisputeModal(true);
