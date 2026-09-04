@@ -555,7 +555,7 @@ export const EditModal: React.FC<EditModalProps> = ({
 
       {/* LOCATION MAP PICKER SUB-MODAL */}
       {showPicker && (
-        <div className="modal active" style={{ zIndex: 1100 }}>
+        <div className="modal active" style={{ zIndex: 100000 }}>
           <div className="modal-card" style={{ maxWidth: '520px' }}>
             <div className="modal-title">
               <h3>📍 Map Location Picker</h3>

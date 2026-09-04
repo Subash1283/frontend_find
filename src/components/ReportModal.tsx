@@ -638,7 +638,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
       {/* LOCATION MAP PICKER SUB-MODAL */}
       {showPicker && (
-        <div className="modal active" style={{ zIndex: 1100 }}>
+        <div className="modal active" style={{ zIndex: 100000 }}>
           <div className="modal-card" style={{ maxWidth: '520px' }}>
             <div className="modal-title">
               <h3>📍 Map Location Pinpoint</h3>
@@ -705,7 +705,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
       {/* IMAGE MISMATCH DIALOG */}
       {showMismatchDialog && mismatchDetails && (
-        <div className="modal active" style={{ zIndex: 2000 }} onClick={handleMismatchDismiss}>
+        <div className="modal active" style={{ zIndex: 100000 }} onClick={handleMismatchDismiss}>
           <div className="modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-title">
               <h3> Image Verification Alert</h3>
