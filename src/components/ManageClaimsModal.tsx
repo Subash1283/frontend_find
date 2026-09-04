@@ -531,7 +531,7 @@ export const ManageClaimsModal: React.FC<ManageClaimsModalProps> = ({
               <i className="fas fa-shield-check"></i>
             </div>
 
-            <h3 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', fontFamily: "'Inter', sans-serif" }}>
               Claim Approved & Code Generated!
             </h3>
 

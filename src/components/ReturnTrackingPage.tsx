@@ -832,7 +832,7 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
                 <i className="fas fa-undo"></i>
               </div>
 
-              <h3 style={{ margin: '0 0 8px', fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', fontFamily: "'Inter', sans-serif" }}>
                 Revoke Claim Confirmation
               </h3>
 

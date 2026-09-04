@@ -69,11 +69,11 @@ export const SuspendedAccountModal: React.FC<SuspendedAccountModalProps> = ({ re
         <i className="fas fa-ban" style={{ fontSize: '1.5rem' }} />
       </div>
 
-      <h2 style={{ marginBottom: '0.5rem', color: '#0f172a', fontSize: '1.4rem', fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>
+      <h2 style={{ marginBottom: '0.5rem', color: '#0f172a', fontSize: '1.4rem', fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>
         Account Suspended
       </h2>
 
-      <p style={{ color: '#64748b', lineHeight: 1.55, fontSize: '0.92rem', marginBottom: '1.25rem', fontFamily: "'Outfit', sans-serif" }}>
+      <p style={{ color: '#64748b', lineHeight: 1.55, fontSize: '0.92rem', marginBottom: '1.25rem', fontFamily: "'Inter', sans-serif" }}>
         Your account has been temporarily suspended and you cannot sign in at this time.
       </p>
 
@@ -97,17 +97,17 @@ export const SuspendedAccountModal: React.FC<SuspendedAccountModalProps> = ({ re
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             marginBottom: '4px',
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Inter', sans-serif",
           }}
         >
           REASON FOR SUSPENSION
         </div>
-        <p style={{ margin: 0, color: '#991b1b', fontSize: '0.9rem', lineHeight: 1.5, fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>
+        <p style={{ margin: 0, color: '#991b1b', fontSize: '0.9rem', lineHeight: 1.5, fontWeight: 500, fontFamily: "'Inter', sans-serif" }}>
           {reason}
         </p>
       </div>
 
-      <p style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1.5rem', fontFamily: "'Outfit', sans-serif" }}>
+      <p style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1.5rem', fontFamily: "'Inter', sans-serif" }}>
         If you believe this was a mistake, please contact support at{' '}
         <strong style={{ color: '#2563eb' }}>support@findit.gmail.com</strong>.
       </p>
@@ -126,7 +126,7 @@ export const SuspendedAccountModal: React.FC<SuspendedAccountModalProps> = ({ re
           cursor: 'pointer',
           boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)',
           transition: 'all 0.2s ease',
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Inter', sans-serif",
         }}
         onClick={onClose}
         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.4)'; }}

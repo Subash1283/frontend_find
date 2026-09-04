@@ -87,7 +87,7 @@ export const ClaimVerificationModal: React.FC<ClaimVerificationModalProps> = ({
             fontSize: '1.4rem',
             fontWeight: 800,
             color: '#0f172a',
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Inter', sans-serif",
           }}
         >
           Claim Verified!

@@ -247,7 +247,7 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Header row with tags */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'Syne', color: 'var(--text-main)' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: "'Inter', sans-serif", color: 'var(--text-main)' }}>
               {item.title}
             </h2>
             <div style={{ display: 'flex', gap: '6px' }}>

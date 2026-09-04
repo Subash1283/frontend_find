@@ -240,6 +240,73 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* MISSING ADDRESS TOP ALERT BANNER */}
+          {!currentUser?.address && vStatus !== 'verified' && (
+            <div style={{
+              background: 'linear-gradient(135deg, #fffbe6 0%, #fef3c7 100%)',
+              border: '1px solid #fcd34d',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              boxShadow: '0 4px 14px rgba(217, 119, 6, 0.08)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.25rem',
+                  boxShadow: '0 3px 8px rgba(245, 158, 11, 0.3)',
+                  flexShrink: 0,
+                }}>
+                  💡
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#78350f', marginBottom: '3px' }}>
+                    Missing Home Address
+                  </div>
+                  <div style={{ fontSize: '0.84rem', color: '#92400e', lineHeight: 1.4 }}>
+                    Please enter and save your Home Address in <strong>Basic Details</strong> below before uploading your ID document for accurate multi-factor OCR matching.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.getElementById('profile-address');
+                  if (input) {
+                    input.focus();
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 6px rgba(180, 83, 9, 0.25)',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Add Address 👇
+              </button>
+            </div>
+          )}
+
           {/* PROFILE INFO SECTION */}
           <div style={{ background: 'var(--bg-secondary)', borderRadius: '14px', padding: '20px', border: '1px solid var(--border-soft)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -268,8 +335,25 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <div className="form-group">
                   <label htmlFor="profile-address">
                     <span>Home Address</span>
+                    {vStatus === 'verified' ? (
+                      <span className="readonly-badge"> Permanent</span>
+                    ) : !currentUser?.address ? (
+                      <span style={{ fontSize: '0.72rem', background: '#fef3c7', color: '#b45309', padding: '2px 7px', borderRadius: '6px', fontWeight: 700, marginLeft: '6px', border: '1px solid #fde68a' }}>
+                        Required for verification
+                      </span>
+                    ) : null}
                   </label>
-                  <input id="profile-address" name="address" type="text" placeholder="e.g. Lalitpur, Nepal" value={address} onChange={e => setAddress(e.target.value)} />
+                  <input
+                    id="profile-address"
+                    name="address"
+                    type="text"
+                    placeholder="e.g. Lalitpur, Nepal"
+                    value={address}
+                    onChange={e => setAddress(e.target.value)}
+                    disabled={vStatus === 'verified'}
+                    style={!currentUser?.address && vStatus !== 'verified' ? { border: '1.5px solid #f59e0b', backgroundColor: '#fffdf5' } : {}}
+                    title={vStatus === 'verified' ? "Home Address is permanent once verified" : ""}
+                  />
                 </div>
                 <div className="form-group">
                   <label htmlFor="profile-phone">

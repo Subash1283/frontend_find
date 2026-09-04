@@ -590,8 +590,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             });
 
             const popupHtml = `
-              <div style="padding:5px; min-width:150px; font-family:'Outfit', sans-serif;">
-                <h4 style="margin-bottom:5px; font-family:'Syne'; font-size:0.9rem; color:var(--text-main); font-weight:700;">${
+              <div style="padding:5px; min-width:150px; font-family:'Inter', sans-serif;">
+                <h4 style="margin-bottom:5px; font-family:'Inter', sans-serif; font-size:0.9rem; color:var(--text-main); font-weight:700;">${
                   item.title
                 }</h4>
                 <p style="font-size:0.75rem; color:var(--text-soft); margin-bottom:10px;">${item.location}</p>
@@ -1079,7 +1079,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 fontWeight: 800, 
                 marginBottom: '12px',
                 color: '#0f172a',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', sans-serif",
               }}>
                 Important Announcement
               </h3>
@@ -1090,7 +1090,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 lineHeight: '1.6',
                 marginBottom: '24px',
                 fontWeight: 500,
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', sans-serif",
               }}>
                 {announcements[0].message}
               </p>
@@ -1109,7 +1109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
                   transition: 'all 0.2s ease',
                   width: '100%',
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                 }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(37, 99, 235, 0.4)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(37, 99, 235, 0.3)'; }}
@@ -1725,7 +1725,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 fontWeight: 800, 
                 marginBottom: '10px',
                 color: '#0f172a',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', sans-serif",
               }}>
                 Delete {deleteConfirm.itemType === 'user' ? 'User' : 'Item'}?
               </h3>
@@ -1734,7 +1734,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 color: '#475569', 
                 marginBottom: '24px',
                 lineHeight: '1.55',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', sans-serif",
               }}>
                 Are you sure you want to permanently delete{' '}
                 <strong style={{ color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px' }}>
@@ -1760,7 +1760,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   minWidth: '105px',
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; }}
@@ -1781,7 +1781,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   transition: 'all 0.2s',
                   minWidth: '105px',
                   boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                 }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.4)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)'; }}

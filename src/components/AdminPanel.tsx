@@ -611,7 +611,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     <div>
       {/* HEADER SECTION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <h3 style={{ fontFamily: 'Syne', fontSize: '1.25rem', fontWeight: 800 }}>🛡️ System Administrative Console</h3>
+        <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: '1.25rem', fontWeight: 800 }}>🛡️ System Administrative Console</h3>
         <button className="btn-primary" onClick={handleBulkVerify}>
           <i className="fas fa-magic"></i> Auto-Verify Backlog (OCR Check)
         </button>

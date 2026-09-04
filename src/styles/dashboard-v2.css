@@ -12,7 +12,7 @@
   gap: 12px;
   background: var(--page-bg, #f8fafc);
   color: var(--text-main, #0f172a);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .app-boot-spinner,
@@ -24,7 +24,7 @@
 
 .app-boot-screen h2,
 .oauth-callback-card h1 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--text-main, #0f172a);
@@ -199,7 +199,7 @@
 
   color: var(--text-main, #0f172a);
 
-  font-family: 'Syne', 'Outfit', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 1.35rem;
   font-weight: 800;
 
@@ -293,7 +293,7 @@
 
   color: var(--text-muted, #475569);
 
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
 
@@ -664,7 +664,7 @@
 
   color: var(--text-main, #0f172a);
 
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
 
   font-size: clamp(1.35rem, 2.5vw, 1.75rem);
 
@@ -808,7 +808,7 @@
 .stat-card-v2 .stat-number {
   color: var(--text-main, #0f172a);
 
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
 
   font-size: 2rem;
   font-weight: 800;
@@ -930,7 +930,7 @@
 
   color: #0f172a;
 
-  font-family: 'Syne', 'Outfit', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
 
   font-size: 1.05rem;
   font-weight: 700;

@@ -103,7 +103,7 @@ html {
 }
 
 body {
-  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   background: var(--page-bg);
   color: var(--text-main);
   min-height: 100vh;
@@ -323,7 +323,7 @@ body {
 }
 
 .logo {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 4rem;
   font-weight: 800;
   background: linear-gradient(135deg, #4facfe, #00c6ff, #a855f7);
@@ -390,7 +390,7 @@ body {
 }
 
 .hero-stat-number {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 2rem;
   font-weight: 800;
   background: linear-gradient(135deg, #4facfe, #a855f7);
@@ -615,7 +615,7 @@ body {
 }
 
 .footer-logo {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 2rem;
   font-weight: 800;
   background: linear-gradient(135deg, #4facfe, #a855f7);
@@ -672,7 +672,7 @@ body {
 }
 
 .social-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
@@ -760,7 +760,7 @@ body {
 }
 
 .social-stat-number {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 1.8rem;
   font-weight: 800;
   background: linear-gradient(135deg, #4facfe, #a855f7);
@@ -818,7 +818,7 @@ body {
 }
 
 .stat-number-landing {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 2.8rem;
   font-weight: 800;
   background: linear-gradient(135deg, #4facfe, #a855f7);
@@ -845,7 +845,7 @@ body {
 }
 
 .section-title-landing {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 2rem;
   font-weight: 700;
   text-align: center;
@@ -1243,7 +1243,7 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
 }
 
 .landing-modal-tabs {
@@ -1668,7 +1668,7 @@ body {
 }
 
 .logo-text {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 1.45rem;
   font-weight: 800;
   color: #0f172a !important;
@@ -1873,7 +1873,7 @@ a.sidebar-logo {
   font-size: 0.72rem;
   font-weight: 800;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   letter-spacing: 0.2px;
   display: inline-flex;
   align-items: center;
@@ -2013,7 +2013,7 @@ a.sidebar-logo {
 }
 
 .greeting h1 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -2061,7 +2061,7 @@ a.sidebar-logo {
   width: 200px;
   outline: none;
   font-size: 0.85rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--text-main);
 }
 
@@ -2081,7 +2081,7 @@ a.sidebar-logo {
   padding: 6px 14px;
   font-size: 0.78rem;
   font-weight: 600;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   color: var(--text-muted);
   transition: all 0.18s;
@@ -2104,7 +2104,7 @@ a.sidebar-logo {
   border-radius: var(--r-pill);
   padding: 9px 20px;
   font-weight: 600;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.85rem;
   display: flex;
   gap: 8px;
@@ -2194,7 +2194,7 @@ a.sidebar-logo {
 }
 
 .stat-number {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 2.4rem;
   font-weight: 800;
   line-height: 1;
@@ -2301,7 +2301,7 @@ a.sidebar-logo {
 }
 
 .section-title h3 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 1.05rem;
   font-weight: 700;
   display: flex;
@@ -2450,7 +2450,7 @@ a.sidebar-logo {
   padding: 3px 11px;
   cursor: pointer;
   font-size: 0.65rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   color: var(--text-muted);
   transition: all 0.15s;
@@ -2485,7 +2485,7 @@ a.sidebar-logo {
   padding: 6px 14px;
   font-size: 0.72rem;
   font-weight: 600;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.18s;
   color: var(--text-muted);
@@ -2564,7 +2564,7 @@ a.sidebar-logo {
 }
 
 .modal-title h3 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
 }
@@ -2650,7 +2650,7 @@ textarea {
   border-radius: var(--r-sm);
   background: var(--surface-2);
   font-size: 0.88rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
   transition: all 0.2s;
   color: var(--text-main);
@@ -3044,7 +3044,7 @@ input[type="file"] {
   background: white;
   outline: none;
   font-size: 0.92rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .send-btn {
@@ -3090,7 +3090,7 @@ input[type="file"] {
   margin-bottom: 8px;
   color: var(--text-main);
   font-size: 1.05rem;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
 }
 
 .chat-request-banner p {
@@ -3110,7 +3110,7 @@ input[type="file"] {
   border-radius: var(--r-pill);
   border: none;
   font-weight: 700;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.9rem;
@@ -3160,7 +3160,7 @@ input[type="file"] {
 }
 
 .inbox-header h3 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
   display: flex;
@@ -3324,7 +3324,7 @@ input[type="file"] {
   display: block;
   font-size: 1.25rem;
   color: var(--text-main);
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   margin-top: 2px;
 }
 
@@ -4927,7 +4927,7 @@ input[type="file"] {
   border: none;
   background: transparent;
   font-size: 0.88rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
 }
 

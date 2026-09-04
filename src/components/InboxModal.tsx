@@ -337,7 +337,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                 fontWeight: 800, 
                 marginBottom: '10px',
                 color: '#0f172a',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', sans-serif",
               }}>
                 Delete Conversation?
               </h3>
@@ -346,7 +346,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                 color: '#475569', 
                 marginBottom: '24px',
                 lineHeight: '1.55',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', sans-serif",
               }}>
                 Are you sure you want to permanently delete this conversation?<br />
                 <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.85rem', display: 'inline-block', marginTop: '6px' }}>
@@ -368,7 +368,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   minWidth: '105px',
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                 }}
               >
                 Cancel
@@ -403,7 +403,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
                   transition: 'all 0.2s',
                   minWidth: '105px',
                   boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                 }}
               >
                 Delete
