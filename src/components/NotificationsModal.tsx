@@ -115,7 +115,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                     <i className={code ? "fas fa-key" : "fas fa-bolt"} style={{ color: code ? '#059669' : 'var(--reward)', marginTop: '3px' }}></i>
-                    <div style={{ fontSize: '0.9rem', lineHeight: '1.4', flex: 1, color: code ? '#065f46' : 'inherit', fontWeight: code ? 500 : 400 }}>
+                    <div style={{ fontSize: '0.9rem', lineHeight: '1.4', flex: 1, color: code ? '#065f46' : 'var(--text-main, #0f172a)', fontWeight: 500 }}>
                       {notif.message}
                     </div>
                   </div>

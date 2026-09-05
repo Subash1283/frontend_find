@@ -427,23 +427,53 @@ export const ReturnTrackingPage: React.FC<ReturnTrackingPageProps> = ({
             {/* Chat Button */}
             {otherUser && (
               <div className="rtp-chat-btn-wrap">
-                <button
-                  className="premium-btn-primary"
-                  onClick={() => onOpenChat(item.id, item.title, otherUser.id)}
-                  style={{
-                    padding: '12px 20px',
-                    borderRadius: '12px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '0.9rem',
-                    fontWeight: 700,
-                    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
-                  }}
-                >
-                  <i className="fas fa-comments"></i>
-                  Chat with {otherRoleTitle} ({otherUser.name})
-                </button>
+                {['APPROVED', 'RETURN_ARRANGED', 'ITEM_RECEIVED', 'RETURN_COMPLETED'].includes(claim.status) ? (
+                  <button
+                    className="premium-btn-primary"
+                    onClick={() => onOpenChat(item.id, item.title, otherUser.id)}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                    }}
+                  >
+                    <i className="fas fa-comments"></i>
+                    Chat with {otherRoleTitle} ({otherUser.name})
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <button
+                      className="premium-btn-primary"
+                      disabled
+                      style={{
+                        padding: '12px 20px',
+                        borderRadius: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                        background: '#94a3b8',
+                        color: '#ffffff',
+                        cursor: 'not-allowed',
+                        boxShadow: 'none',
+                        opacity: 0.8,
+                      }}
+                      title="Messaging unlocks after finder approves claim request and initiates chat"
+                    >
+                      <i className="fas fa-lock"></i>
+                      Chat Locked (Pending Approval)
+                    </button>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-soft)', marginTop: '4px', textAlign: 'center' }}>
+                      Messaging unlocks after finder manages claim &amp; chats first
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
