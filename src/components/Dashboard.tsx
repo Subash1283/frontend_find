@@ -93,6 +93,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [activeChat, setActiveChat] = useState<{ itemId: number; title: string; otherUserId: number } | null>(null);
   const activeChatRef = useRef(activeChat);
   const [showPlatformReview, setShowPlatformReview] = useState(false);
+  const [showLeaveReviewModal, setShowLeaveReviewModal] = useState(false);
   const [reviewItemId, setReviewItemId] = useState<number | null>(null);
   const [verificationModalData, setVerificationModalData] = useState<{ show: boolean; code: string; itemTitle?: string; itemId?: number; otherUserId?: number } | null>(null);
   const [trackingClaimId, setTrackingClaimId] = useState<number | null>(null);
@@ -995,6 +996,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span>Profile Settings</span>
           </NavLink>
 
+          <button
+            type="button"
+            className={`nav-item ${showLeaveReviewModal ? 'active' : ''}`}
+            style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
+            onClick={() => {
+              setSidebarOpen(false);
+              setShowLeaveReviewModal(true);
+            }}
+          >
+            <span className="nav-icon"><i className="fas fa-star" style={{ color: '#f59e0b' }}></i></span>
+            <span>Leave Review</span>
+          </button>
+
           {currentUser?.role === 'admin' && (
             <>
               <div className="nav-label">Management</div>
@@ -1824,6 +1838,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             setShowPlatformReview(false);
             setReviewItemId(null);
           }}
+          showToast={showToast}
+        />
+      )}
+
+      {showLeaveReviewModal && (
+        <PlatformReviewModal
+          token={token}
+          apiBase={apiBase}
+          itemId={0}
+          onClose={() => setShowLeaveReviewModal(false)}
+          onSuccess={() => setShowLeaveReviewModal(false)}
           showToast={showToast}
         />
       )}
