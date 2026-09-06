@@ -492,7 +492,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             </div>
 
             {!isFound && (
-              <div className="form-row" id="rewardContainer">
+              <div className="form-row" id=
+              "rewardContainer">
                 <div className="form-group">
                   <label htmlFor="report-reward">Offer Reward Amount (Optional)</label>
                   <input
