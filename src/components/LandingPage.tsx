@@ -442,7 +442,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ apiBase, onLoginSucces
       return showStatus(setRegStatus, `⚠️ Typo detected in email domain. Did you mean ${emailVal.suggestedFix}?`, 'error');
     }
     if (password.length < 6) {
-      return showStatus(setRegStatus, '❌ Password must be at least 6 characters', 'error');
+      return showStatus(setRegStatus, '❌ Password must be at least 8 characters', 'error');
     }
     if (password !== confirm) {
       return showStatus(setRegStatus, '❌ Passwords do not match', 'error');

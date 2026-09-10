@@ -77,7 +77,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       return showToast('Please fill out all password fields', 'error');
     }
     if (newPassword.length < 6) {
-      return showToast('New password must be at least 6 characters', 'error');
+      return showToast('New password must be at least 8 characters', 'error');
     }
     if (newPassword !== confirmPassword) {
       return showToast('Passwords do not match', 'error');
