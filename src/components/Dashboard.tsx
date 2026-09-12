@@ -877,8 +877,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </Link>
 
         <div className="nav-section">
-          <div className="nav-label">Navigation</div>
-
           <NavLink
             to={DASHBOARD_PATHS.home}
             end
