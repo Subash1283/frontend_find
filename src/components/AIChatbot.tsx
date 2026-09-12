@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 
 interface AIChatbotProps {
   token: string;
   apiBase: string;
-  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  showToast?: (message: string, type?: "success" | "error" | "info") => void;
   isLocked?: boolean;
   onOpenItemDetails: (id: number) => void;
   onOpenChat: (itemId: number, title: string, otherUserId: number) => void;
@@ -11,18 +11,18 @@ interface AIChatbotProps {
 
 /** Claim state per found item */
 interface ClaimState {
-  step: 'idle' | 'requested' | 'approved';
+  step: "idle" | "requested" | "approved";
 }
 
 interface ChatMessage {
-  sender: 'user' | 'bot';
+  sender: "user" | "bot";
   text: string;
   isPending?: boolean;
   contactCard?: {
     itemId: number;
     itemTitle: string;
     contactName: string;
-    contactRole: 'Owner' | 'Finder';
+    contactRole: "Owner" | "Finder";
     contactEmail?: string;
     contactUserId: number;
   };
@@ -31,26 +31,36 @@ interface ChatMessage {
 /** Extract all item IDs mentioned as [ID:N] or (ID:N) from a string */
 function extractItemIds(text: string): number[] {
   const matches = [...text.matchAll(/[\(\[]ID:\s*(\d+)[\)\]]/gi)];
-  return [...new Set(matches.map(m => parseInt(m[1], 10)))];
+  return [...new Set(matches.map((m) => parseInt(m[1], 10)))];
 }
 
 /** Returns true if the text sounds like a confirmation or a request to contact */
 function isConfirmation(text: string): boolean {
   const t = text.trim().toLowerCase();
-  
+
   // Prevent false positives on negative phrases ("not mine", "no", "incorrect")
-  if (/\b(no|not mine|isn'?t mine|not it|incorrect|wrong|none|doesn'?t match)\b/.test(t)) {
+  if (
+    /\b(no|not mine|isn'?t mine|not it|incorrect|wrong|none|doesn'?t match)\b/.test(
+      t,
+    )
+  ) {
     return false;
   }
 
-  const isConfirm = /\b(yes|yeah|yep|yup|correct|that'?s (mine|my|it)|it'?s mine|found it|match(es)?|confirmed?|that is mine|this is mine|mine|absolutely|right|exactly|affirmative)\b/.test(t);
-  const isContactRequest = /\b(how (can|do|to) (i|we) (contact|reach|message|chat|get)|contact (him|her|them|owner|finder)|chat with|message (him|her|them))\b/.test(t);
+  const isConfirm =
+    /\b(yes|yeah|yep|yup|correct|that'?s (mine|my|it)|it'?s mine|found it|match(es)?|confirmed?|that is mine|this is mine|mine|absolutely|right|exactly|affirmative)\b/.test(
+      t,
+    );
+  const isContactRequest =
+    /\b(how (can|do|to) (i|we) (contact|reach|message|chat|get)|contact (him|her|them|owner|finder)|chat with|message (him|her|them))\b/.test(
+      t,
+    );
   return isConfirm || isContactRequest;
 }
 
 const BUBBLE_SIZE = 60;
 const EDGE = 16;
-const POS_KEY = 'findit-assistant-pos';
+const POS_KEY = "findit-assistant-pos";
 const PANEL_W = 380;
 const PANEL_H = 560;
 
@@ -68,7 +78,7 @@ function loadAssistantPos() {
     const raw = localStorage.getItem(POS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as { x?: number; y?: number };
-      if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+      if (typeof parsed.x === "number" && typeof parsed.y === "number") {
         return clampAssistantPos(parsed.x, parsed.y);
       }
     }
@@ -115,9 +125,12 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { sender: 'bot', text: 'Hi! I am FindIT, your Findit AI assistant. Tell me what you lost or found, and I will search our system for matches!' },
+    {
+      sender: "bot",
+      text: "Hi! I am FindIT, your Findit AI assistant. Tell me what you lost or found, and I will search our system for matches!",
+    },
   ]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [pos, setPos] = useState(loadAssistantPos);
   const [dragging, setDragging] = useState(false);
   const [viewport, setViewport] = useState(() => ({
@@ -136,11 +149,15 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
   });
 
   // Per-item claim state and loading
-  const [claimStates, setClaimStates] = useState<Record<number, ClaimState>>({});
+  const [claimStates, setClaimStates] = useState<Record<number, ClaimState>>(
+    {},
+  );
   const [claimLoading, setClaimLoading] = useState<Record<number, boolean>>({});
   // Per-item proof message input and form-open state
   const [proofInputs, setProofInputs] = useState<Record<number, string>>({});
-  const [proofFormOpen, setProofFormOpen] = useState<Record<number, boolean>>({});
+  const [proofFormOpen, setProofFormOpen] = useState<Record<number, boolean>>(
+    {},
+  );
 
   /** IDs of items the bot most recently suggested as matches */
   const lastMentionedItemIds = useRef<number[]>([]);
@@ -162,8 +179,8 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
       setViewport({ w: window.innerWidth, h: window.innerHeight });
       setPos((current) => clampAssistantPos(current.x, current.y));
     };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const persistPos = (next: { x: number; y: number }) => {
@@ -194,7 +211,12 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     if (!dragRef.current.moved && dx * dx + dy * dy < 36) return;
     dragRef.current.moved = true;
     setDragging(true);
-    setPos(clampAssistantPos(dragRef.current.originX + dx, dragRef.current.originY + dy));
+    setPos(
+      clampAssistantPos(
+        dragRef.current.originX + dx,
+        dragRef.current.originY + dy,
+      ),
+    );
   };
 
   const handleFabPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -236,50 +258,64 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
 
   /** Check claim status for a FOUND item and update claimStates */
   const checkAndInitClaimState = async (item: any) => {
-    if (item.type !== 'found') return;
+    if (item.type !== "found") return;
     try {
       const res = await fetch(`${apiBase}/items/${item.id}/claim/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
       const status = await res.json();
-      setClaimStates(prev => ({
+      setClaimStates((prev) => ({
         ...prev,
         [item.id]: {
-          step: status.isVerified ? 'approved'
-              : status.hasPendingRequest ? 'requested'
-              : 'idle',
+          step: status.isVerified
+            ? "approved"
+            : status.hasPendingRequest
+              ? "requested"
+              : "idle",
         },
       }));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleSubmitClaim = async (itemId: number) => {
-    const proof = (proofInputs[itemId] || '').trim();
+    const proof = (proofInputs[itemId] || "").trim();
     if (!proof) {
-      showToast('Please write a proof message before submitting.', 'error');
+      showToast("Please write a proof message before submitting.", "error");
       return;
     }
-    setClaimLoading(prev => ({ ...prev, [itemId]: true }));
+    setClaimLoading((prev) => ({ ...prev, [itemId]: true }));
     try {
       const res = await fetch(`${apiBase}/items/${itemId}/claim-requests`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ proofMessage: proof }),
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || 'Claim request sent! Waiting for the finder to accept.', 'success');
-        setClaimStates(prev => ({ ...prev, [itemId]: { step: 'requested' } }));
-        setProofFormOpen(prev => ({ ...prev, [itemId]: false }));
-        setProofInputs(prev => ({ ...prev, [itemId]: '' }));
+        showToast(
+          data.message ||
+            "Claim request sent! Waiting for the finder to accept.",
+          "success",
+        );
+        setClaimStates((prev) => ({
+          ...prev,
+          [itemId]: { step: "requested" },
+        }));
+        setProofFormOpen((prev) => ({ ...prev, [itemId]: false }));
+        setProofInputs((prev) => ({ ...prev, [itemId]: "" }));
       } else {
-        showToast(data.message || 'Failed to send claim request', 'error');
+        showToast(data.message || "Failed to send claim request", "error");
       }
     } catch {
-      showToast('Error sending claim request', 'error');
+      showToast("Error sending claim request", "error");
     } finally {
-      setClaimLoading(prev => ({ ...prev, [itemId]: false }));
+      setClaimLoading((prev) => ({ ...prev, [itemId]: false }));
     }
   };
 
@@ -288,66 +324,88 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     const query = inputValue.trim();
     if (!query) return;
 
-    setMessages(prev => [...prev, { sender: 'user', text: query }]);
-    setInputValue('');
+    setMessages((prev) => [...prev, { sender: "user", text: query }]);
+    setInputValue("");
 
     // Confirmation flow
     if (isConfirmation(query) && lastMentionedItemIds.current.length > 0) {
-      setMessages(prev => [...prev, { sender: 'bot', text: "Great! Let me pull up the finder's details...", isPending: true }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "Great! Let me pull up the finder's details...",
+          isPending: true,
+        },
+      ]);
       try {
         const results = await Promise.all(
-          lastMentionedItemIds.current.map(id => fetchItemContactInfo(id))
+          lastMentionedItemIds.current.map((id) => fetchItemContactInfo(id)),
         );
         const validItems = results.filter(Boolean);
 
         if (validItems.length === 0) {
-          setMessages(prev => prev.map((msg, idx) =>
-            idx === prev.length - 1
-              ? { sender: 'bot', text: "Sorry, I couldn't retrieve the item details. Please try opening the item directly from the list." }
-              : msg
-          ));
+          setMessages((prev) =>
+            prev.map((msg, idx) =>
+              idx === prev.length - 1
+                ? {
+                    sender: "bot",
+                    text: "Sorry, I couldn't retrieve the item details. Please try opening the item directly from the list.",
+                  }
+                : msg,
+            ),
+          );
           return;
         }
 
         // Initialize claim states for FOUND items
-        await Promise.all(validItems.map(item => checkAndInitClaimState(item)));
+        await Promise.all(
+          validItems.map((item) => checkAndInitClaimState(item)),
+        );
 
         let inboxData: any[] = [];
         try {
           const inboxRes = await fetch(`${apiBase}/chat/inbox`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
           if (inboxRes.ok) {
             inboxData = await inboxRes.json();
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          /* ignore */
+        }
 
         // Replace pending with contact cards
-        setMessages(prev => {
+        setMessages((prev) => {
           const withoutPending = prev.slice(0, -1);
           const introMsg: ChatMessage = {
-            sender: 'bot',
-            text: `Here ${validItems.length === 1 ? 'is the contact' : 'are the contacts'} for the matching items:`,
+            sender: "bot",
+            text: `Here ${validItems.length === 1 ? "is the contact" : "are the contacts"} for the matching items:`,
           };
-          const cards: ChatMessage[] = validItems.map(item => {
-            const existingConv = inboxData.find(c => c.item?.id === item.id);
-            const contactUserId = existingConv ? existingConv.otherUser?.id : item.user?.id;
-            const contactName = existingConv ? (existingConv.otherUser?.name || 'Unknown') : (item.user?.name || 'Unknown');
-            const contactEmail = existingConv ? existingConv.otherUser?.email : item.user?.email;
-            
-            let contactRole = item.type === 'lost' ? 'Owner' : 'Finder';
+          const cards: ChatMessage[] = validItems.map((item) => {
+            const existingConv = inboxData.find((c) => c.item?.id === item.id);
+            const contactUserId = existingConv
+              ? existingConv.otherUser?.id
+              : item.user?.id;
+            const contactName = existingConv
+              ? existingConv.otherUser?.name || "Unknown"
+              : item.user?.name || "Unknown";
+            const contactEmail = existingConv
+              ? existingConv.otherUser?.email
+              : item.user?.email;
+
+            let contactRole = item.type === "lost" ? "Owner" : "Finder";
             if (existingConv && item.user?.id !== contactUserId) {
-              contactRole = item.type === 'lost' ? 'Finder' : 'Owner';
+              contactRole = item.type === "lost" ? "Finder" : "Owner";
             }
 
             return {
-              sender: 'bot' as const,
-              text: '',
+              sender: "bot" as const,
+              text: "",
               contactCard: {
                 itemId: item.id,
                 itemTitle: item.title,
                 contactName,
-                contactRole: contactRole as 'Owner' | 'Finder',
+                contactRole: contactRole as "Owner" | "Finder",
                 contactEmail,
                 contactUserId,
               },
@@ -362,66 +420,88 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
 
         lastMentionedItemIds.current = [];
       } catch {
-        setMessages(prev => prev.map((msg, idx) =>
-          idx === prev.length - 1
-            ? { sender: 'bot', text: "Sorry, I couldn't load the finder's details. Please try again." }
-            : msg
-        ));
+        setMessages((prev) =>
+          prev.map((msg, idx) =>
+            idx === prev.length - 1
+              ? {
+                  sender: "bot",
+                  text: "Sorry, I couldn't load the finder's details. Please try again.",
+                }
+              : msg,
+          ),
+        );
       }
       return;
     }
 
     // Normal search flow
-    setMessages(prev => [...prev, { sender: 'bot', text: 'Analyzing...', isPending: true }]);
+    setMessages((prev) => [
+      ...prev,
+      { sender: "bot", text: "Analyzing...", isPending: true },
+    ]);
 
     try {
       const res = await fetch(`${apiBase}/chatbot/ask`, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ message: query }),
       });
       if (res.ok) {
         const data = await res.json();
-        const responseText = data.response || "I'm sorry, I couldn't process that query. Please try again.";
+        const responseText =
+          data.response ||
+          "I'm sorry, I couldn't process that query. Please try again.";
         rememberMentionedIds(responseText);
-        setMessages(prev =>
+        setMessages((prev) =>
           prev.map((msg, idx) =>
-            idx === prev.length - 1 ? { sender: 'bot', text: responseText } : msg
-          )
+            idx === prev.length - 1
+              ? { sender: "bot", text: responseText }
+              : msg,
+          ),
         );
       } else {
         throw new Error();
       }
     } catch {
-      setMessages(prev =>
+      setMessages((prev) =>
         prev.map((msg, idx) =>
           idx === prev.length - 1
-            ? { sender: 'bot', text: "Sorry, I'm having trouble connecting to the AI assistant right now." }
-            : msg
-        )
+            ? {
+                sender: "bot",
+                text: "Sorry, I'm having trouble connecting to the AI assistant right now.",
+              }
+            : msg,
+        ),
       );
     }
   };
 
   // Parse basic markdown like **bold**, bullet points, and newlines
   const renderMarkdown = (text: string) => {
-    const normalizedText = text.replace(/\r\n/g, '\n');
-    const processedText = normalizedText.replace(/(^|\n)([\*\-] )\s*/g, '$1• ');
-    
+    const normalizedText = text.replace(/\r\n/g, "\n");
+    const processedText = normalizedText.replace(/(^|\n)([\*\-] )\s*/g, "$1• ");
+
     const paragraphs = processedText.split(/\n{2,}/);
-    
+
     return paragraphs.map((paragraph, pIdx) => (
-      <div key={pIdx} style={{ marginBottom: pIdx < paragraphs.length - 1 ? '12px' : '0' }}>
-        {paragraph.split('\n').map((line, lineIdx, arr) => {
+      <div
+        key={pIdx}
+        style={{ marginBottom: pIdx < paragraphs.length - 1 ? "12px" : "0" }}
+      >
+        {paragraph.split("\n").map((line, lineIdx, arr) => {
           const parts = line.split(/\*\*(.*?)\*\*/g);
           return (
             <React.Fragment key={lineIdx}>
-              {parts.map((part, i) => (
-                i % 2 === 1 ? <strong key={i}>{part}</strong> : <React.Fragment key={i}>{part}</React.Fragment>
-              ))}
+              {parts.map((part, i) =>
+                i % 2 === 1 ? (
+                  <strong key={i}>{part}</strong>
+                ) : (
+                  <React.Fragment key={i}>{part}</React.Fragment>
+                ),
+              )}
               {lineIdx < arr.length - 1 && <br />}
             </React.Fragment>
           );
@@ -444,15 +524,15 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
             type="button"
             onClick={() => onOpenItemDetails(itemId)}
             style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--accent)',
-              fontWeight: 'bold',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              padding: '0 2px',
-              fontFamily: 'inherit',
-              fontSize: 'inherit',
+              background: "none",
+              border: "none",
+              color: "var(--accent)",
+              fontWeight: "bold",
+              textDecoration: "underline",
+              cursor: "pointer",
+              padding: "0 2px",
+              fontFamily: "inherit",
+              fontSize: "inherit",
             }}
           >
             [View Item #{itemId}]
@@ -463,159 +543,233 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
     });
   };
 
-  const renderContactCard = (card: NonNullable<ChatMessage['contactCard']>) => {
+  const renderContactCard = (card: NonNullable<ChatMessage["contactCard"]>) => {
     const claim = claimStates[card.itemId];
-    const isFoundItem = card.contactRole === 'Finder';
-    const isApproved = !isFoundItem || claim?.step === 'approved';
-    const isRequested = isFoundItem && claim?.step === 'requested';
-    const isIdle = isFoundItem && (!claim || claim.step === 'idle');
+    const isFoundItem = card.contactRole === "Finder";
+    const isApproved = !isFoundItem || claim?.step === "approved";
+    const isRequested = isFoundItem && claim?.step === "requested";
+    const isIdle = isFoundItem && (!claim || claim.step === "idle");
     const isLoading = !!claimLoading[card.itemId];
 
     return (
       <div
         key={card.itemId}
         style={{
-          background: 'linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(99,102,241,0.08) 100%)',
-          border: '1.5px solid rgba(6,182,212,0.35)',
-          borderRadius: '12px',
-          padding: '14px 16px',
-          marginTop: '4px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
+          background:
+            "linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(99,102,241,0.08) 100%)",
+          border: "1.5px solid rgba(6,182,212,0.35)",
+          borderRadius: "12px",
+          padding: "14px 16px",
+          marginTop: "4px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
         }}
       >
         {/* Contact info */}
-        <div 
+        <div
           onClick={() => onOpenItemDetails(card.itemId)}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '10px',
-            cursor: 'pointer',
-            padding: '4px',
-            borderRadius: '8px',
-            transition: 'background 0.2s',
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            cursor: "pointer",
+            padding: "4px",
+            borderRadius: "8px",
+            transition: "background 0.2s",
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = "rgba(0,0,0,0.05)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
         >
           <div
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              background: card.contactRole === 'Owner' ? 'var(--lost)' : 'var(--accent)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: "38px",
+              height: "38px",
+              borderRadius: "50%",
+              background:
+                card.contactRole === "Owner" ? "var(--lost)" : "var(--accent)",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               fontWeight: 700,
-              fontSize: '1rem',
+              fontSize: "1rem",
               flexShrink: 0,
             }}
           >
-            {(card.contactName || '?').charAt(0).toUpperCase()}
+            {(card.contactName || "?").charAt(0).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-soft)",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               {card.contactRole}
             </div>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.92rem' }}>
+            <div
+              style={{
+                fontWeight: 700,
+                color: "var(--text-main)",
+                fontSize: "0.92rem",
+              }}
+            >
               {card.contactName}
             </div>
           </div>
         </div>
 
         {/* Item label */}
-        <div style={{ fontSize: '0.78rem', color: 'var(--text-soft)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div
+          style={{
+            fontSize: "0.78rem",
+            color: "var(--text-soft)",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
           <i className="fas fa-box-open" />
-          <span>Item: <strong style={{ color: 'var(--text-main)' }}>{card.itemTitle}</strong></span>
+          <span>
+            Item:{" "}
+            <strong style={{ color: "var(--text-main)" }}>
+              {card.itemTitle}
+            </strong>
+          </span>
         </div>
 
         {/* Request Claim section — only for FOUND items not yet approved */}
         {isFoundItem && (
-          <div style={{ borderTop: '1px solid rgba(6,182,212,0.2)', paddingTop: '10px' }}>
+          <div
+            style={{
+              borderTop: "1px solid rgba(6,182,212,0.2)",
+              paddingTop: "10px",
+            }}
+          >
             {isIdle && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-soft)', margin: 0 }}>
-                  To contact this finder, send a claim request with proof. Chat unlocks once they accept.
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--text-soft)",
+                    margin: 0,
+                  }}
+                >
+                  To contact this finder, send a claim request with proof. Chat
+                  unlocks once they accept.
                 </p>
 
                 {!proofFormOpen[card.itemId] ? (
                   <button
                     type="button"
-                    onClick={() => setProofFormOpen(prev => ({ ...prev, [card.itemId]: true }))}
+                    onClick={() =>
+                      setProofFormOpen((prev) => ({
+                        ...prev,
+                        [card.itemId]: true,
+                      }))
+                    }
                     style={{
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: '#0ea5e9',
-                      color: '#fff',
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: "#0ea5e9",
+                      color: "#fff",
                       fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
                     }}
                   >
                     <i className="fas fa-hand-paper" /> Request Claim
                   </button>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                    }}
+                  >
                     <textarea
                       rows={3}
                       placeholder="Describe your proof (e.g. item color, serial number, where you lost it...)"
-                      value={proofInputs[card.itemId] || ''}
-                      onChange={e => setProofInputs(prev => ({ ...prev, [card.itemId]: e.target.value }))}
+                      value={proofInputs[card.itemId] || ""}
+                      onChange={(e) =>
+                        setProofInputs((prev) => ({
+                          ...prev,
+                          [card.itemId]: e.target.value,
+                        }))
+                      }
                       style={{
-                        width: '100%',
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border)',
-                        fontSize: '0.8rem',
-                        resize: 'vertical',
-                        fontFamily: 'inherit',
-                        boxSizing: 'border-box',
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border)",
+                        fontSize: "0.8rem",
+                        resize: "vertical",
+                        fontFamily: "inherit",
+                        boxSizing: "border-box",
                       }}
                     />
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: "flex", gap: "6px" }}>
                       <button
                         type="button"
                         disabled={isLoading}
                         onClick={() => handleSubmitClaim(card.itemId)}
                         style={{
                           flex: 1,
-                          padding: '7px 10px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: '#0ea5e9',
-                          color: '#fff',
+                          padding: "7px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: "#0ea5e9",
+                          color: "#fff",
                           fontWeight: 700,
-                          fontSize: '0.8rem',
-                          cursor: isLoading ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
+                          fontSize: "0.8rem",
+                          cursor: isLoading ? "not-allowed" : "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
                         }}
                       >
-                        {isLoading ? <i className="fas fa-circle-notch fa-spin" /> : <><i className="fas fa-paper-plane" /> Send Request</>}
+                        {isLoading ? (
+                          <i className="fas fa-circle-notch fa-spin" />
+                        ) : (
+                          <>
+                            <i className="fas fa-paper-plane" /> Send Request
+                          </>
+                        )}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setProofFormOpen(prev => ({ ...prev, [card.itemId]: false }))}
+                        onClick={() =>
+                          setProofFormOpen((prev) => ({
+                            ...prev,
+                            [card.itemId]: false,
+                          }))
+                        }
                         style={{
-                          padding: '7px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border)',
-                          background: 'transparent',
-                          color: 'var(--text-soft)',
+                          padding: "7px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          color: "var(--text-soft)",
                           fontWeight: 600,
-                          fontSize: '0.8rem',
-                          cursor: 'pointer',
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
                         }}
                       >
                         Cancel
@@ -627,63 +781,79 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
             )}
 
             {isRequested && (
-              <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', padding: '8px 12px', fontSize: '0.8rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <i className="fas fa-clock" /> Claim request sent — waiting for the finder to accept.
+              <div
+                style={{
+                  background: "#fffbeb",
+                  border: "1px solid #fef3c7",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  fontSize: "0.8rem",
+                  color: "#b45309",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <i className="fas fa-clock" /> Claim request sent — waiting for
+                the finder to accept.
               </div>
             )}
-
-
-
           </div>
         )}
 
         {/* Action buttons */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <button
             type="button"
             disabled={!isApproved}
             onClick={() => {
               if (isApproved && card.contactUserId) {
-                onOpenChat(card.itemId, `${card.contactName} – ${card.itemTitle}`, card.contactUserId);
+                onOpenChat(
+                  card.itemId,
+                  `${card.contactName} – ${card.itemTitle}`,
+                  card.contactUserId,
+                );
               }
             }}
             style={{
               flex: 1,
-              padding: '8px 12px',
-              borderRadius: '8px',
-              border: 'none',
+              padding: "8px 12px",
+              borderRadius: "8px",
+              border: "none",
               background: isApproved
-                ? (card.contactRole === 'Owner' ? 'var(--lost)' : 'var(--accent)')
-                : 'var(--border)',
-              color: isApproved ? '#fff' : 'var(--text-soft)',
+                ? card.contactRole === "Owner"
+                  ? "var(--lost)"
+                  : "var(--accent)"
+                : "var(--border)",
+              color: isApproved ? "#fff" : "var(--text-soft)",
               fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: isApproved ? 'pointer' : 'not-allowed',
+              fontSize: "0.8rem",
+              cursor: isApproved ? "pointer" : "not-allowed",
               opacity: isApproved ? 1 : 0.55,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
             }}
           >
-            <i className={`fas ${isApproved ? 'fa-comments' : 'fa-lock'}`} />
-            {isApproved ? `Chat with ${card.contactRole}` : 'Chat Locked'}
+            <i className={`fas ${isApproved ? "fa-comments" : "fa-lock"}`} />
+            {isApproved ? `Chat with ${card.contactRole}` : "Chat Locked"}
           </button>
           <button
             type="button"
             onClick={() => onOpenItemDetails(card.itemId)}
             style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              border: '1.5px solid var(--accent)',
-              background: 'transparent',
-              color: 'var(--accent)',
+              padding: "8px 12px",
+              borderRadius: "8px",
+              border: "1.5px solid var(--accent)",
+              background: "transparent",
+              color: "var(--accent)",
               fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+              fontSize: "0.8rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
             }}
           >
             <i className="fas fa-eye" />
@@ -735,13 +905,46 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`chat-message ${msg.sender === 'user' ? 'user' : 'bot'}`}
+                className={`chat-message ${msg.sender === "user" ? "user" : "bot"}`}
               >
                 {msg.isPending ? (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 2px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.32s' }}></span>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both', animationDelay: '-0.16s' }}></span>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', animation: 'typingDot 1.4s infinite ease-in-out both' }}></span>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 2px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "var(--accent)",
+                        animation: "typingDot 1.4s infinite ease-in-out both",
+                        animationDelay: "-0.32s",
+                      }}
+                    ></span>
+                    <span
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "var(--accent)",
+                        animation: "typingDot 1.4s infinite ease-in-out both",
+                        animationDelay: "-0.16s",
+                      }}
+                    ></span>
+                    <span
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "var(--accent)",
+                        animation: "typingDot 1.4s infinite ease-in-out both",
+                      }}
+                    ></span>
                   </div>
                 ) : msg.contactCard ? (
                   renderContactCard(msg.contactCard)
@@ -759,7 +962,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
               id="chatbotInput"
               placeholder="Type a message..."
               value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
+              onChange={(e) => setInputValue(e.target.value)}
             />
             <button type="submit" aria-label="Send message">
               <i className="fas fa-paper-plane"></i>
@@ -770,9 +973,9 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
 
       <button
         type="button"
-        className={`assistant-fab${isOpen ? ' open' : ''}${dragging ? ' dragging' : ''}`}
+        className={`assistant-fab${isOpen ? " open" : ""}${dragging ? " dragging" : ""}`}
         style={{ left: pos.x, top: pos.y }}
-        aria-label={isOpen ? 'Close FindIT Assistant' : 'Open FindIT Assistant'}
+        aria-label={isOpen ? "Close FindIT Assistant" : "Open FindIT Assistant"}
         title="Drag to move, tap to chat"
         onPointerDown={handleFabPointerDown}
         onPointerMove={handleFabPointerMove}
@@ -780,7 +983,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({
         onPointerCancel={handleFabPointerUp}
       >
         <span className="assistant-fab-pulse" />
-        <i className={`fas ${isOpen ? 'fa-times' : 'fa-comments'}`}></i>
+        <i className={`fas ${isOpen ? "fa-times" : "fa-comments"}`}></i>
       </button>
     </>
   );
